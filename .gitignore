@@ -13,3 +13,8 @@ frontend/out/
 # OS
 .DS_Store
 Thumbs.db
+
+echo ".env" >> frontend/.gitignore
+
+# Local Netlify folder
+.netlify
