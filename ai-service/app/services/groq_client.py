@@ -99,13 +99,8 @@ def call_llm(
 
 
 def fix_spacing(text: str, protected_terms: list[str] | None = None) -> str:
-    
-    #     import wordninja
-
     protected_terms = protected_terms or []
     protected_lower = [t.lower() for t in protected_terms]
-
-    
 
     if not text or not text.strip():
         return text
@@ -126,14 +121,6 @@ def fix_spacing(text: str, protected_terms: list[str] | None = None) -> str:
             fixed_words.append(word)
             continue
 
-    #         if clean.isalpha() and len(clean) > 4 and not _dictionary.check(clean_lower):
-    #             split_result = wordninja.split(clean_lower)
-    #             if len(split_result) > 1 and all(_dictionary.check(w) for w in split_result):
-    #                 prefix = word[: len(word) - len(stripped)] if stripped else ""
-    #                 suffix = stripped[len(clean):] if clean != stripped else ""
-    #                 fixed_words.append(prefix + " ".join(split_result) + suffix)
-    #                 continue
-    # 
         fixed_words.append(word)
 
     return " ".join(fixed_words)
