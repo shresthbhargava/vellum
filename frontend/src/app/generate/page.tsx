@@ -185,7 +185,7 @@ export default function GeneratePage() {
     const inputType = file ? (file.type.includes("pdf") ? "pdf" : "image") : "text";
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/pipeline/generate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
