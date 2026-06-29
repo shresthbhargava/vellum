@@ -27,7 +27,7 @@ import {
   Cpu,
   Activity
 } from "lucide-react";
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://${BACKEND_URL}';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500';
 interface AgentTrace {
   step: string;
   agent: string;
@@ -500,8 +500,7 @@ export default function ResultsPage() {
     setGeneratingNames(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 
-          `${BACKEND_URL}/api/generate-names`}`,
+        `${`${BACKEND_URL}/api/generate-names`}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
