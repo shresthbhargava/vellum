@@ -429,8 +429,9 @@ const ConfidenceBadge = ({ citations, content }: {
               : 'Needs Validation';
 
   return (
+    // FROM:
     <div 
-      className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-mono ${color.bg} ${color.border}`}
+      className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-mono shrink-0 ${color.bg} ${color.border}`}
       title="Based on source citations and content depth"
     >
       <div className="w-12 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
@@ -1044,7 +1045,7 @@ export default function ResultsPage() {
   const brdData = data;
   const isGenerating = status === "processing";
   const confidenceScore = brd?.overall_confidence || 0.75;
-  const startupName = data?.startup_name || brd?.title || 'Vellum';
+  const startupName = (data?.startup_name || brd?.title || 'Vellum').replace(/undefined/gi, '').trim() || 'Vellum';
 
   // Track steps of agents
   const agentsList = [
@@ -1062,7 +1063,7 @@ export default function ResultsPage() {
       transition={{ duration: 0.4, delay: 8 * 0.1 }}
       className="card-3d glass-card rounded-xl p-6"
     >
-      <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
         <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
           09 / TECHNICAL INFRASTRUCTURE SNAPSHOT
         </h3>
@@ -1167,7 +1168,7 @@ export default function ResultsPage() {
       transition={{ duration: 0.4, delay: 9 * 0.1 }}
       className="card-3d glass-card rounded-xl p-6"
     >
-      <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
         <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
           10 / IMPLEMENTATION PATHWAY & MILESTONES
         </h3>
@@ -1303,16 +1304,16 @@ export default function ResultsPage() {
       </div>
 
       <div className="border-t border-darkBorder pt-4 mt-4 text-[10px] font-mono text-neutral-500 leading-relaxed">
-        Synthesized via Gemini 2.5 Pro multi-modal intelligence layer. Pipeline latency:{" "}
+        Synthesized via Llama 3.3 (Groq) intelligence layer. Pipeline latency:{" "}
         <span className="text-neutral-300 font-bold">{(processing_time_ms / 1000).toFixed(2)}s</span>.
       </div>
     </div>
   );
 
-  const renderAgentTraceFeed = () => (
+const renderAgentTraceFeed = () => (
     <div className="card-3d rounded-xl p-5 glow-accent flex flex-col justify-between h-full">
       <div>
-        <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
           <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-bold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
             AGENT TRAIL EXPLAINABILITY STREAM
@@ -1392,7 +1393,7 @@ export default function ResultsPage() {
       transition={{ duration: 0.4, delay: 12 * 0.1 }}
       className="card-3d glass-card rounded-xl p-5 glow-accent h-full"
     >
-      <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
         <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-neutral-400 mb-0">
           SWOT ANALYSIS GRID
         </h3>
@@ -1889,6 +1890,15 @@ export default function ResultsPage() {
               <span>{translations[lang].exportWord}</span>
             </button>
           </div>
+            {data?.vellum_score && (
+              <div className="hidden sm:block">
+                <VellumScore
+                  score={data.vellum_score}
+                  validationScore={data.validation?.overall_score}
+                  criticScore={data.critic?.overall_score}
+                />
+              </div>
+            )}
         </div>
       </header>
 
@@ -1948,24 +1958,16 @@ export default function ResultsPage() {
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 no-print">
-              <div className="col-span-1 lg:col-span-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
+              <div className="">
                 {renderValidityIndicator()}
               </div>
-                <div className="col-span-1 lg:col-span-4">
+                <div className="">
                 {status !== "processing" && brd && (
                   <InvestorScore brd={brd} isLarge={true} />
                 )}
               </div>
-              <div className="col-span-1 lg:col-span-4">
-                {data?.vellum_score && (
-                  <VellumScore
-                    score={data.vellum_score}
-                    validationScore={data.validation?.overall_score}
-                    criticScore={data.critic?.overall_score}
-                  />
-                )}
-              </div>
+              
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -2000,7 +2002,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 0 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     01 / EXECUTIVE SUMMARY
                   </h3>
@@ -2042,7 +2044,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 1 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     02 / PROBLEM STATEMENT & IMPACT
                   </h3>
@@ -2119,7 +2121,7 @@ export default function ResultsPage() {
                   transition={{ duration: 0.4, delay: 2 * 0.1 }}
                   className="card-3d glass-card rounded-xl p-6"
                 >
-                  <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                  <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                     <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                       TARGET MARKET
                     </h3>
@@ -2141,7 +2143,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 3 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     03 / STRATEGIC OBJECTIVES (SMART)
                   </h3>
@@ -2191,7 +2193,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 4 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     04 / BOUNDARIES & PRODUCT SCOPE
                   </h3>
@@ -2268,7 +2270,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 5 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     05 / STAKEHOLDER RACI ROLES
                   </h3>
@@ -2327,7 +2329,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 6 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     06 / FUNCTIONAL SPECIFICATIONS
                   </h3>
@@ -2397,7 +2399,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 7 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     07 / NON-FUNCTIONAL REQUIREMENTS
                   </h3>
@@ -2461,7 +2463,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 8 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     08 / CORE USER STORIES
                   </h3>
@@ -2545,7 +2547,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 10 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     11 / KEY PERFORMANCE METRICS
                   </h3>
@@ -2611,7 +2613,7 @@ export default function ResultsPage() {
                 transition={{ duration: 0.4, delay: 11 * 0.1 }}
                 className="card-3d glass-card rounded-xl p-6"
               >
-                <div className="flex justify-between items-center mb-4 border-b border-darkBorder pb-2">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-darkBorder pb-2">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-accent mb-0">
                     12 / RISK SUITE & MITIGATION PROTOCOLS
                   </h3>
