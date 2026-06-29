@@ -6,7 +6,6 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  Send,
   Sparkles,
   AlertTriangle,
   CheckCircle,
