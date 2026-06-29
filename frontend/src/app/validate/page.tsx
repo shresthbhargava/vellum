@@ -34,7 +34,7 @@ interface ValidationResponse {
   confidence: number;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://${BACKEND_URL}";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http:// ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}";
 
 const DIMENSION_META: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   market_need: { icon: <Target size={16} />, label: "Market Need", color: "#3b82f6" },
@@ -123,7 +123,7 @@ export default function ValidatePage() {
     if (!idea.trim()) return;
     setLoading(true); setError(""); setResult(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/validation/validate`, {
+      const res = await fetch(` ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/validation/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idea: idea.trim(), industry: industry.trim() || undefined }),

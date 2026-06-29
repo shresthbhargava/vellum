@@ -65,7 +65,7 @@ def health_check():
 def root():
     return {
         "message": "Vellum AI Service is running",
-        "docs": "http://${BACKEND_URL}/docs",
+        "docs": "http:// ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/docs",
         "endpoints": {
             "pipeline": "POST /api/pipeline/generate",
             "validation": "POST /api/validation/validate",
