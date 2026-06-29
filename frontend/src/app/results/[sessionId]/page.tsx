@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { motion } from "framer-motion";
-import { translations, Language } from "@/utils/translations";
+import { translations, Language } from "../../../utils/translations";
 import VellumScore from "@/components/VellumScore";
 import {
   ArrowLeft,
