@@ -500,7 +500,7 @@ export default function ResultsPage() {
     setGeneratingNames(true);
     try {
       const res = await fetch(
-        `${`${BACKEND_URL}/api/generate-names`}`,
+        `${BACKEND_URL}/api/generate-names`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
