@@ -48,7 +48,7 @@ export default function GeneratePage() {
 
   // Check backend health on load
   useEffect(() => {
-    fetch("http://localhost:8500/health")
+    fetch("http://${BACKEND_URL}/health")
       .then((res) => {
         if (res.ok) setBackendStatus("online");
         else setBackendStatus("offline");
@@ -124,7 +124,7 @@ export default function GeneratePage() {
   const loadDemo = async () => {
     setError(null);
     try {
-      const res = await fetch("http://localhost:8500/api/demo/edtech");
+      const res = await fetch("http://${BACKEND_URL}/api/demo/edtech");
       if (!res.ok) throw new Error("Demo endpoint failed");
       const data = await res.json();
       
@@ -183,7 +183,7 @@ export default function GeneratePage() {
     const inputType = file ? (file.type.includes("pdf") ? "pdf" : "image") : "text";
 
     try {
-      const response = await fetch("http://localhost:8500/api/generate", {
+      const response = await fetch("http://${BACKEND_URL}/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

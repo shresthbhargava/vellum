@@ -35,7 +35,7 @@ interface ValidationResponse {
   confidence: number;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8500";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://${BACKEND_URL}";
 
 const DIMENSION_META: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   market_need: { icon: <Target size={16} />, label: "Market Need", color: "#3b82f6" },

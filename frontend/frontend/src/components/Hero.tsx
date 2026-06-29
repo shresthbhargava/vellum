@@ -49,7 +49,7 @@ export default function Hero() {
             transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
             className="font-sans text-lg sm:text-xl md:text-2xl text-white max-w-2xl leading-relaxed"
           >
-            AutoResearch AI turns scattered notes, PDFs and screenshots into a
+            Vellum turns scattered notes, PDFs and screenshots into a
             professional BRD in under 60 seconds.
           </motion.p>
 

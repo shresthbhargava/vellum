@@ -23,7 +23,7 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AutoResearch AI - BRD Generator",
+  title: "Vellum - BRD Generator",
   description:
     "Enterprise multi-agent Business Requirement Document (BRD) generation tool powered by Gemini 2.5 Pro.",
 };

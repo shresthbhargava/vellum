@@ -51,7 +51,7 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 w-full bg-black border-b border-white z-50 font-sans tracking-widest text-[11px] font-bold">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleScroll("hero")}>
-          <span className="text-white">AutoResearch AI</span>
+          <span className="text-white">Vellum</span>
           <span className="text-[#f5a623] font-mono">/</span>
           <span className="text-white">POWERED BY GEMINI AI</span>
         </div>

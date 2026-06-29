@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    title: "AutoResearch AI",
+    title: "Vellum",
     subtitle: "Multi-Agent BRD Orchestrator",
     apiOnline: "API: Online",
     apiOffline: "API: Offline",
@@ -22,7 +22,7 @@ export const translations = {
     dragDropSub: "PDF, PNG, JPG, WEBP formats supported (Max 5MB)",
     btnGenerate: "Generate BRD Outline",
     btnGenerating: "Genesis Engine Starting...",
-    footer: "AutoResearch AI System • Version 1.4.0 • Google Cloud Architecture Sandbox",
+    footer: "Vellum System • Version 1.4.0 • Google Cloud Architecture Sandbox",
     backBtn: "Back to input",
     exportPdf: "Export PDF",
     exportWord: "Export Word",
@@ -102,7 +102,7 @@ export const translations = {
     competitorRisk: "जोखिम स्तर",
   },
   es: {
-    title: "AutoResearch AI",
+    title: "Vellum",
     subtitle: "Orquestador BRD Multi-Agente",
     apiOnline: "API: En línea",
     apiOffline: "API: Fuera de línea",
@@ -124,7 +124,7 @@ export const translations = {
     dragDropSub: "Formatos admitidos: PDF, PNG, JPG, WEBP (Máx. 5 MB)",
     btnGenerate: "Generar esquema BRD",
     btnGenerating: "Iniciando motor Génesis...",
-    footer: "AutoResearch AI System • Versión 1.4.0 • Sandbox de arquitectura de Google Cloud",
+    footer: "Vellum System • Versión 1.4.0 • Sandbox de arquitectura de Google Cloud",
     backBtn: "Volver a la entrada",
     exportPdf: "Exportar PDF",
     exportWord: "Exportar Word",

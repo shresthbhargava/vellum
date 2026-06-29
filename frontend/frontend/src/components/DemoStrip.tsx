@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 
 const terminalText = [
-  "# AUTORESEARCH AI - COMPLIANCE BRD CORE",
+  "# Vellum - COMPLIANCE BRD CORE",
   "SESSION_ID: 56ab395b-bbeb-498a-ac20-bb2999e1e06f",
   "TIMESTAMP: 2026-06-06T16:22:54Z",
   "STATUS: ACTIVE",
