@@ -27,7 +27,7 @@ export default function GeneratePage() {
   const [base64File, setBase64File] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<"online" | "offline">("online");
+  const [backendStatus] = useState<"online" | "offline">("online");
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lang, setLang] = useState<Language>('en');
