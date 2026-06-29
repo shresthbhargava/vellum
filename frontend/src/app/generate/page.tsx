@@ -27,7 +27,7 @@ export default function GeneratePage() {
   const [base64File, setBase64File] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [backendStatus, setBackendStatus] = useState<"online" | "offline">("online");
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lang, setLang] = useState<Language>('en');
@@ -49,14 +49,7 @@ export default function GeneratePage() {
   };
 
   // Check backend health on load
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/health`)
-      .then((res) => {
-        if (res.ok) setBackendStatus("online");
-        else setBackendStatus("offline");
-      })
-      .catch(() => setBackendStatus("offline"));
-  }, []);
+  
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -123,49 +116,34 @@ export default function GeneratePage() {
   };
 
   // Typing simulator for demo loader
-  const loadDemo = async () => {
+    const loadDemo = async () => {
     setError(null);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/demo/edtech`);
-      if (!res.ok) throw new Error("Demo endpoint failed");
-      const data = await res.json();
-      
-      // Simulate typing animation
-      const targetName = data.startup_name;
-      const targetText = data.text_input;
+    const localName = "EduStream AI";
+    const localText = "An AI platform that conducts realistic coding interviews for software engineer applicants. It provides live voice interaction, a shared coding canvas with realtime syntax validation, and assesses candidates on code quality, problem solving, and communication. It generates a full evaluation scorecard and feeds metrics to a hiring team dashboard.";
+    
+    setStartupName("");
+    setTextInput("");
 
-      setStartupName("");
-      setTextInput("");
+    let nameIndex = 0;
+    let textIndex = 0;
 
-      let nameIndex = 0;
-      let textIndex = 0;
-
-      const nameTimer = setInterval(() => {
-        if (nameIndex < targetName.length) {
-          setStartupName((prev) => prev + targetName[nameIndex]);
-          nameIndex++;
-        } else {
-          clearInterval(nameTimer);
-          // Start typing description after name finishes
-          const textTimer = setInterval(() => {
-            if (textIndex < targetText.length) {
-              setTextInput((prev) => prev + targetText[textIndex]);
-              textIndex += 2; // Type faster
-            } else {
-              setTextInput(targetText); // enforce complete
-              clearInterval(textTimer);
-            }
-          }, 10);
-        }
-      }, 25);
-    } catch {
-      // Fallback local edtech demo if backend is offline
-      const localName = "EduStream AI";
-      const localText = "An AI platform that conducts realistic coding interviews for software engineer applicants. It provides live voice interaction, a shared coding canvas with realtime syntax validation, and assesses candidates on code quality, problem solving, and communication. It generates a full evaluation scorecard and feeds metrics to a hiring team dashboard.";
-      
-      setStartupName(localName);
-      setTextInput(localText);
-    }
+    const nameTimer = setInterval(() => {
+      if (nameIndex < localName.length) {
+        setStartupName((prev) => prev + localName[nameIndex]);
+        nameIndex++;
+      } else {
+        clearInterval(nameTimer);
+        const textTimer = setInterval(() => {
+          if (textIndex < localText.length) {
+            setTextInput((prev) => prev + localText[textIndex]);
+            textIndex += 2;
+          } else {
+            setTextInput(localText);
+            clearInterval(textTimer);
+          }
+        }, 10);
+      }
+    }, 25);
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -266,23 +244,18 @@ export default function GeneratePage() {
             </div>
 
             {/* Backend Connection Indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-[#050505] border border-darkBorder">
-              <span className={`w-2 h-2 rounded-none ${
+            <span className={`w-2 h-2 rounded-none ${
                 backendStatus === "online" 
                   ? "bg-accent animate-pulse" 
-                  : backendStatus === "offline"
-                    ? "bg-red-500"
-                    : "bg-amber-500 animate-bounce"
+                  : "bg-red-500"
               }`}></span>
               <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
                 {backendStatus === "online" 
                   ? translations[lang].apiOnline 
-                  : backendStatus === "offline" 
-                    ? translations[lang].apiOffline 
-                    : translations[lang].apiChecking}
+                  : translations[lang].apiOffline}
               </span>
             </div>
-          </div>
+          
         </div>
       </header>
 
