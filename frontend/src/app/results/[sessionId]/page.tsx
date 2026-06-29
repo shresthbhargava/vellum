@@ -27,7 +27,7 @@ import {
   Cpu,
   Activity
 } from "lucide-react";
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500';
+
 interface AgentTrace {
   step: string;
   agent: string;
@@ -500,7 +500,7 @@ export default function ResultsPage() {
     setGeneratingNames(true);
     try {
       const res = await fetch(
-        `${BACKEND_URL}/api/generate-names`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/generate-names`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -608,7 +608,7 @@ export default function ResultsPage() {
 
     const fetchSession = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/agents`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/sessions/${sessionId}/agents`);
         if (!res.ok) {
           if (res.status === 404) {
             throw new Error("Session specifications not found. Verify session UUID.");
@@ -1874,7 +1874,7 @@ export default function ResultsPage() {
               {translations[lang].exportPdf}
             </button>
             <button
-            onClick={() => window.open(`${BACKEND_URL}/api/export/pdf/${sessionId}`)}
+            onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/export/pdf/${sessionId}`)}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold uppercase btn-3d-secondary cursor-pointer"
             >
             <Download className="w-3.5 h-3.5" />
