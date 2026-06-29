@@ -123,7 +123,7 @@ export default function ValidatePage() {
     if (!idea.trim()) return;
     setLoading(true); setError(""); setResult(null);
     try {
-      const res = await fetch(` ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/validation/validate`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/validation/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idea: idea.trim(), industry: industry.trim() || undefined }),
