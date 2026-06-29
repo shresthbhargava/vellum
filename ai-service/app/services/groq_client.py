@@ -99,13 +99,13 @@ def call_llm(
 
 
 def fix_spacing(text: str, protected_terms: list[str] | None = None) -> str:
-    import enchant
+    
     import wordninja
 
     protected_terms = protected_terms or []
     protected_lower = [t.lower() for t in protected_terms]
 
-    _dictionary = enchant.Dict("en_US")
+    
 
     if not text or not text.strip():
         return text

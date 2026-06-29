@@ -17,7 +17,7 @@ import {
   BarChart3
 } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { translations, Language } from "@/utils/translations";
+import { translations, Language } from "../../utils/translations";
 
 export default function GeneratePage() {
   const router = useRouter();
@@ -185,7 +185,7 @@ export default function GeneratePage() {
     const inputType = file ? (file.type.includes("pdf") ? "pdf" : "image") : "text";
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/generate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/pipeline/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
