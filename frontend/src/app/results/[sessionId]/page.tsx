@@ -485,6 +485,7 @@ export default function ResultsPage() {
   ];
 
   const suggestDomains = (name: string) => {
+    if (!name || name === 'undefined' || name === 'AutoResearch AI') return [];
     const clean = name.toLowerCase()
       .replace(/\s+/g, '')
       .replace(/[^a-z0-9]/g, '');
