@@ -14,7 +14,7 @@ const steps = [
   {
     number: "02",
     title: "PROCESS",
-    description: "Google Gemini multi-modal layer parses text and visual components inside the documents.",
+    description: "Llama 3.3 (Groq) multi-agent pipeline parses text and visual components inside the documents.",
     icon: Cpu,
   },
   {

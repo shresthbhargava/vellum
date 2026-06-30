@@ -329,7 +329,7 @@ export default function GeneratePage() {
         <div className="text-center mb-10 select-none animate-float">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-none bg-[#0c0802] border border-accent/20 text-accent text-xs font-medium mb-4">
             <Terminal className="w-3.5 h-3.5" />
-            <span>Google Gemini-Powered Explainable Architectures</span>
+            <span>Llama 3.3 (Groq) Powered Multi-Agent Intelligence</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-b from-white to-neutral-300 bg-clip-text text-transparent mb-3">
             {translations[lang].heroTitle}

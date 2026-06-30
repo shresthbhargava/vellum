@@ -25,21 +25,21 @@ export default function SocialProof() {
             </h3>
           </div>
           <p className="text-sm font-bold tracking-widest uppercase font-mono text-neutral-500 border border-neutral-300 px-4 py-2 self-start md:self-center">
-            POWERED BY GEMINI + VERTEX AI
+            POWERED BY GROQ + LLAMA 3.3
           </p>
         </div>
 
         {/* Logo strip row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 mt-4">
           
-          {/* Google Cloud Block */}
+          {/* Render Block */}
           <div className="flex items-center gap-4 border border-black p-6 hover:bg-black hover:text-white transition-colors duration-300 select-none">
             <div className="w-10 h-10 border border-black bg-black text-white flex items-center justify-center font-bold">
               <Cloud className="w-5 h-5 text-[#f5a623]" />
             </div>
             <div>
               <h4 className="font-serif text-lg font-bold tracking-tight uppercase">
-                Google Cloud
+                Render
               </h4>
               <p className="font-mono text-[9px] tracking-wider uppercase text-neutral-400">
                 SANDBOX INGEST PIPELINE
@@ -47,14 +47,14 @@ export default function SocialProof() {
             </div>
           </div>
 
-          {/* Vertex AI Block */}
+          {/* Groq Block */}
           <div className="flex items-center gap-4 border border-black p-6 hover:bg-black hover:text-white transition-colors duration-300 select-none">
             <div className="w-10 h-10 border border-black bg-black text-white flex items-center justify-center font-bold">
               <Cpu className="w-5 h-5 text-[#f5a623]" />
             </div>
             <div>
               <h4 className="font-serif text-lg font-bold tracking-tight uppercase">
-                Vertex AI
+                Groq
               </h4>
               <p className="font-mono text-[9px] tracking-wider uppercase text-neutral-400">
                 MULTI-AGENT ORCHESTRATION
@@ -69,7 +69,7 @@ export default function SocialProof() {
             </div>
             <div>
               <h4 className="font-serif text-lg font-bold tracking-tight uppercase">
-                Google Gemini
+                Llama 3.3
               </h4>
               <p className="font-mono text-[9px] tracking-wider uppercase text-neutral-400">
                 EXPLAINABLE LOGIC ENGINE

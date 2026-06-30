@@ -1742,7 +1742,7 @@ const renderAgentTraceFeed = () => (
                 <span className="text-accent">autoresearch.sessions</span> &amp; <span className="text-accent">agent_traces</span>
               </td>
               <td className="py-3 pr-4 truncate max-w-[200px]">
-                {gcs_uri || "gs://autoresearch-ai-brd-store/brds/dev..."}
+                {gcs_uri || "brd-store/brds/dev..."}
               </td>
               <td className="py-3 pr-4">Multimodal AI Stream</td>
               <td className="py-3 pr-4 text-right text-emerald-400 font-bold">$0.00016</td>
@@ -2841,7 +2841,7 @@ const renderAgentTraceFeed = () => (
                   input_type: brd.citations ? "pdf/image" : "text",
                   confidence_score: confidenceScore,
                   brd_title: brd.title || "Untitled BRD Specifications",
-                  gcs_uri: gcs_uri || `gs://autoresearch-ai-brd-store/brds/${sessionId}/brd_payload.json`,
+                  gcs_uri: gcs_uri || `brd-store/brds/${sessionId}/brd_payload.json`,
                   processing_time_ms: processing_time_ms || 2500,
                   schema_validation: "PASS",
                   agent_trace_logs: traces.map((t) => ({

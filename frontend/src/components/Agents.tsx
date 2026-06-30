@@ -130,7 +130,7 @@ export default function Agents() {
                     </div>
 
                     <div className="text-[9px] text-[#f5a623] tracking-widest font-mono text-right font-bold uppercase">
-                      VERTEX AI + GEMINI LAYER
+                      GROQ + LLAMA 3.3
                     </div>
                   </div>
 

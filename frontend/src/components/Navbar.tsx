@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import React, { useEffect, useState } from "react";
 
@@ -50,11 +51,11 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 w-full bg-black border-b border-white z-50 font-sans tracking-widest text-[11px] font-bold">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleScroll("hero")}>
+        <Link href="https://vellum11.netlify.app/" className="flex items-center gap-2">
           <span className="text-white">Vellum</span>
           <span className="text-[#f5a623] font-mono">/</span>
-          <span className="text-white">POWERED BY GEMINI AI</span>
-        </div>
+          <span className="text-white">POWERED BY GROQ</span>
+        </Link>
 
         <div className="hidden md:flex items-center gap-8">
           {sections.map((sec) => (

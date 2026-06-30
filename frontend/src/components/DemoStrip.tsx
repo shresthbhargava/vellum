@@ -26,7 +26,7 @@ const terminalText = [
   "- REQ-004 [Med]: Direct Word/PDF export pipeline compliant standard sheets.",
   "",
   "## 04 / EXPLAINABLE AI DIAGNOSTIC SCHEMA",
-  "{\n  \"engine\": \"Gemini-2.5-Pro\",\n  \"confidence_score\": 0.96,\n  \"ingestion_latency_ms\": 1482,\n  \"agent_traces_loaded\": 5,\n  \"database_synced\": true\n}",
+  "{\n  \"engine\": \"Llama-3.3-Groq\",\n  \"confidence_score\": 0.96,\n  \"ingestion_latency_ms\": 1482,\n  \"agent_traces_loaded\": 5,\n  \"database_synced\": true\n}",
   "",
   "--------------------------------------------------",
   "PIPELINE WORKFLOW COMPLIANT: VALIDATION PASS (200 OK)",
@@ -120,7 +120,7 @@ export default function DemoStrip() {
               </span>
             </div>
             <span className="text-[9px] text-neutral-500 font-bold">
-              GEMINI_VERTEX_SYNC
+              GROQ_PIPELINE_SYNC
             </span>
           </div>
 

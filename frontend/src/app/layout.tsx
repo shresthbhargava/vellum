@@ -25,7 +25,7 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: "Vellum - BRD Generator",
   description:
-    "Enterprise multi-agent Business Requirement Document (BRD) generation tool powered by Gemini 2.5 Pro.",
+    "Enterprise multi-agent Business Requirement Document (BRD) generation tool powered by Llama 3.3 (Groq).",
 };
 
 export default function RootLayout({
