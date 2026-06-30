@@ -1891,13 +1891,7 @@ const renderAgentTraceFeed = () => (
             </button>
           </div>
             {data?.vellum_score && (
-              <div className="hidden sm:block">
-                <VellumScore
-                  score={data.vellum_score}
-                  validationScore={data.validation?.overall_score}
-                  criticScore={data.critic?.overall_score}
-                />
-              </div>
+              <VellumScore score={data.vellum_score} />
             )}
         </div>
       </header>
