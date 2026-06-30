@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 from app.services import extraction_agent, brd_agent, critic_agent, multimodal_parser, validation_agent
+from app.services import rag_service
 from app.utils.logging_config import get_logger
 from app.database import SessionLocal
 from app.models.db_models import BRDSession
@@ -74,6 +75,7 @@ class GenerateRequest(BaseModel):
     text_input: str = ""
     input_type: str = "text"
     filename: Optional[str] = None
+    rag_session_id: Optional[str] = None
     file_content: Optional[str] = None
 
 
@@ -99,6 +101,16 @@ def generate(request: GenerateRequest):
             except Exception as e:
                 logger.warning("File extraction failed, continuing with text: %s", e)
 
+        # Step 1.5: RAG context
+        rag_context = ""
+        if request.rag_session_id:
+            try:
+                rag_context = rag_service.retrieve_context(request.rag_session_id, raw_idea, top_k=5)
+                if rag_context:
+                    raw_idea = f"{raw_idea}\n\n--- Reference Documents ---\n{rag_context}"
+                    logger.info("RAG context injected: %d chars", len(rag_context))
+            except Exception as e:
+                logger.warning("RAG retrieval failed: %s", e)
         # Step 2: Extract
         extracted = extraction_agent.extract_business_data(raw_idea)
         extracted_dict = extracted.model_dump()

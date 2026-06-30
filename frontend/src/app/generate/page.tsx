@@ -15,7 +15,9 @@ import {
   Trash2,
   Globe,
   BarChart3
+  X,
 } from "lucide-react";
+import { FileStack } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { translations, Language } from "../../utils/translations";
 
@@ -29,6 +31,10 @@ export default function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [backendStatus] = useState<"online" | "offline">("online");
   const [error, setError] = useState<string | null>(null);
+  const [ragFiles, setRagFiles] = useState<File[]>([]);
+  const [ragSessionId, setRagSessionId] = useState<string | null>(null);
+  const [ragUploading, setRagUploading] = useState(false);
+  const ragInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lang, setLang] = useState<Language>('en');
 
@@ -160,6 +166,12 @@ export default function GeneratePage() {
     setIsGenerating(true);
     setError(null);
 
+    // Upload RAG files if any
+    let ragId = ragSessionId;
+    if (ragFiles.length > 0 && !ragSessionId) {
+      ragId = await uploadRagFiles();
+    }
+
     const inputType = file ? (file.type.includes("pdf") ? "pdf" : "image") : "text";
 
     try {
@@ -174,6 +186,7 @@ export default function GeneratePage() {
           input_type: inputType,
           filename: file ? file.name : null,
           file_content: base64File,
+          rag_session_id: ragId,
         }),
       });
 
@@ -226,6 +239,7 @@ export default function GeneratePage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-none bg-[#050505] border border-darkBorder hover:border-accent/40 transition-colors"
             >
               <BarChart3 className="w-3.5 h-3.5 text-accent" />
+  X,
               <span className="text-[10px] font-mono text-neutral-300 uppercase tracking-wider">Validate Idea</span>
             </Link>
 
@@ -398,6 +412,68 @@ export default function GeneratePage() {
                   </button>
                 </div>
               )}
+
+            {/* RAG Reference Documents */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-1.5">
+                <FileStack className="w-3.5 h-3.5" />
+                Reference Documents (optional)
+              </label>
+              <p className="text-[10px] text-neutral-500 font-mono -mt-1">Upload PDFs or text files for context-aware BRD generation</p>
+
+              {ragFiles.length === 0 ? (
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleRagDrop}
+                  onClick={() => ragInputRef.current?.click()}
+                  className="border border-dashed border-darkBorder rounded-none p-4 text-center cursor-pointer transition-all duration-200 bg-[#030303] hover:border-accent/40 hover:bg-card"
+                >
+                  <input
+                    ref={ragInputRef}
+                    type="file"
+                    accept=".pdf,.txt,.md"
+                    multiple
+                    onChange={(e) => handleRagFileAdd(e.target.files)}
+                    className="hidden"
+                  />
+                  <p className="text-[11px] text-neutral-400">Drop PDFs / TXT files here or click to browse</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {ragFiles.map((f, i) => (
+                    <div key={i} className="flex items-center justify-between p-2.5 bg-background border border-darkBorder rounded-none">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <FileText className="w-4 h-4 text-accent shrink-0" />
+                        <span className="text-xs text-neutral-300 truncate">{f.name}</span>
+                        <span className="text-[10px] text-neutral-500 font-mono shrink-0">{(f.size / 1024).toFixed(0)}KB</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRagRemove(i)}
+                        disabled={isGenerating}
+                        className="p-1 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => ragInputRef.current?.click()}
+                    disabled={isGenerating}
+                    className="text-[10px] text-accent/70 hover:text-accent font-mono cursor-pointer"
+                  >
+                    + Add more files
+                  </button>
+                </div>
+              )}
+              {ragUploading && (
+                <p className="text-[10px] text-yellow-400 font-mono animate-pulse">Uploading reference documents...</p>
+              )}
+              {ragSessionId && ragFiles.length > 0 && (
+                <p className="text-[10px] text-green-400/70 font-mono">Context ready ({ragFiles.length} file{ragFiles.length > 1 ? "s" : ""})</p>
+              )}
+            </div>
             </div>
 
             {/* Error Message Panel */}
