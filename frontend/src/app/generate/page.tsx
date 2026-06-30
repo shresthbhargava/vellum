@@ -14,10 +14,10 @@ import {
   Terminal,
   Trash2,
   Globe,
-  BarChart3
+  BarChart3,
   X,
+  FileStack,
 } from "lucide-react";
-import { FileStack } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { translations, Language } from "../../utils/translations";
 
@@ -119,6 +119,55 @@ export default function GeneratePage() {
     setFile(null);
     setBase64File(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+
+  // -- RAG file handlers --
+  const handleRagFileAdd = (files: FileList | null) => {
+    if (!files) return;
+    const allowed = [".pdf", ".txt", ".md"];
+    const newFiles: File[] = [];
+    for (const f of Array.from(files)) {
+      const ext = "." + f.name.split(".").pop()?.toLowerCase();
+      if (!allowed.includes(ext)) continue;
+      if (f.size > 10 * 1024 * 1024) continue;
+      newFiles.push(f);
+    }
+    if (newFiles.length === 0) return;
+    setRagFiles(prev => [...prev, ...newFiles]);
+    setRagSessionId(null);
+  };
+
+  const handleRagRemove = (index: number) => {
+    setRagFiles(prev => prev.filter((_, i) => i !== index));
+    setRagSessionId(null);
+  };
+
+  const handleRagDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    handleRagFileAdd(e.dataTransfer.files);
+  };
+
+  const uploadRagFiles = async (): Promise<string | null> => {
+    if (ragFiles.length === 0 || ragSessionId) return ragSessionId;
+    setRagUploading(true);
+    try {
+      const fd = new FormData();
+      ragFiles.forEach(f => fd.append("files", f));
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8500"}/api/rag/upload`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) throw new Error("RAG upload failed");
+      const data = await res.json();
+      setRagSessionId(data.rag_session_id);
+      return data.rag_session_id;
+    } catch (e) {
+      console.error("RAG upload error:", e);
+      return null;
+    } finally {
+      setRagUploading(false);
+    }
   };
 
   // Typing simulator for demo loader
@@ -239,7 +288,6 @@ export default function GeneratePage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-none bg-[#050505] border border-darkBorder hover:border-accent/40 transition-colors"
             >
               <BarChart3 className="w-3.5 h-3.5 text-accent" />
-  X,
               <span className="text-[10px] font-mono text-neutral-300 uppercase tracking-wider">Validate Idea</span>
             </Link>
 
@@ -412,6 +460,7 @@ export default function GeneratePage() {
                   </button>
                 </div>
               )}
+            </div>
 
             {/* RAG Reference Documents */}
             <div className="flex flex-col gap-1.5">
@@ -473,7 +522,6 @@ export default function GeneratePage() {
               {ragSessionId && ragFiles.length > 0 && (
                 <p className="text-[10px] text-green-400/70 font-mono">Context ready ({ragFiles.length} file{ragFiles.length > 1 ? "s" : ""})</p>
               )}
-            </div>
             </div>
 
             {/* Error Message Panel */}
