@@ -145,6 +145,7 @@ export default function GeneratePage() {
 
   const handleRagDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     handleRagFileAdd(e.dataTransfer.files);
   };
 
@@ -472,7 +473,7 @@ export default function GeneratePage() {
 
               {ragFiles.length === 0 ? (
                 <div
-                  onDragOver={(e) => e.preventDefault()}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   onDrop={handleRagDrop}
                   onClick={() => ragInputRef.current?.click()}
                   className="border border-dashed border-darkBorder rounded-none p-4 text-center cursor-pointer transition-all duration-200 bg-[#030303] hover:border-accent/40 hover:bg-card"
