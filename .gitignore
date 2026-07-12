@@ -18,3 +18,5 @@ echo ".env" >> frontend/.gitignore
 
 # Local Netlify folder
 .netlify
+.idea/
+.vscode/

@@ -49,3 +49,4 @@ reportlab==4.2.5
 chromadb>=1.5.0
 pypdf>=3.0.0
 python-multipart>=0.0.9
+psycopg2-binary>=2.9.0
