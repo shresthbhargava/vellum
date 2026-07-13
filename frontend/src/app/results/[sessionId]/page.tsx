@@ -1230,18 +1230,19 @@ export default function ResultsPage() {
   );
 
   const renderValidityIndicator = () => (
-    <div className="card-3d rounded-xl p-5 flex flex-col justify-between glow-accent h-full">
+    <div className="card-3d rounded-xl p-5 flex flex-col justify-between h-full bg-gradient-to-br from-[#0a0a0a] to-[#050505] border border-[#222] shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 font-bold">
+        <div className="flex justify-between items-center mb-5">
+          <span className="font-mono text-[11px] uppercase tracking-widest text-neutral-400 font-bold">
             TECHNICAL VALIDITY
           </span>
-          <Server className="w-4 h-4 text-accent" />
+          <div className="p-1.5 bg-emerald-500/10 rounded-md border border-emerald-500/20">
+            <Server className="w-4 h-4 text-emerald-400" />
+          </div>
         </div>
-
         <div className="flex items-center gap-6 py-2 select-none">
           {/* Circular indicator */}
-          <div className="relative shrink-0 opacity-40" style={{ width: '96px', height: '96px' }}>
+          <div className="relative shrink-0 drop-shadow-[0_0_15px_rgba(245,166,35,0.2)]" style={{ width: '96px', height: '96px' }}>
             <svg
               width="96"
               height="96"
@@ -1250,24 +1251,29 @@ export default function ResultsPage() {
             >
               {/* Track ring */}
               <circle
-                cx="48" cy="48" r="40"
+                cx="48" cy="48" r="42"
                 fill="none"
                 stroke="#1e293b"
-                strokeWidth="8"
+                strokeWidth="6"
               />
               {/* Progress ring */}
               <circle
-                cx="48" cy="48" r="40"
+                cx="48" cy="48" r="42"
                 fill="none"
-                stroke="#f5a623"
-                strokeWidth="8"
+                stroke="url(#validity-gradient)"
+                strokeWidth="6"
                 strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 40}`}
-                strokeDashoffset={`${2 * Math.PI * 40 * (1 - confidenceScore)}`}
-                style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * (1 - confidenceScore)}`}
+                style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
               />
+              <defs>
+                <linearGradient id="validity-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#f5a623" />
+                  <stop offset="100%" stopColor="#f97316" />
+                </linearGradient>
+              </defs>
             </svg>
-            {/* Centered text overlay — NOT affected by SVG rotation */}
             <div
               style={{
                 position: 'absolute',
@@ -1277,40 +1283,40 @@ export default function ResultsPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 lineHeight: 1.1,
-                gap: '2px',
+                gap: '4px',
               }}
             >
-              <span style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff', lineHeight: 1 }}>
-                {(confidenceScore * 100).toFixed(0)}%
+              <span style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                {(confidenceScore * 100).toFixed(0)}<span className="text-sm text-neutral-400">%</span>
               </span>
-              <span style={{ fontSize: '8px', color: '#71717a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1 }}>
+              <span style={{ fontSize: '9px', color: '#71717a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 Confidence
               </span>
             </div>
           </div>
-
-          <div className="flex-grow flex flex-col gap-2.5">
-            <div>
-              <span className="text-[10px] font-mono text-neutral-500 uppercase block leading-none">Status Code</span>
-              <span className="text-xs font-bold text-white uppercase mt-0.5 block">{status}</span>
+          <div className="flex-grow flex flex-col gap-4">
+            <div className="bg-white/5 p-2.5 rounded-lg border border-white/5">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block leading-none mb-1.5">Status Code</span>
+              <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${status === 'processing' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'}`}></div>
+                {status}
+              </span>
             </div>
             <div>
-              <span className="text-[10px] font-mono text-neutral-500 uppercase block leading-none">Diagnostic Sync</span>
-              <span className="text-xs font-bold text-white uppercase mt-0.5 block">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase block leading-none mb-1">Diagnostic Sync</span>
+              <span className="text-xs font-bold text-emerald-400 uppercase block">
                 {status === "processing" ? "Compiling..." : "Compliant (PASS)"}
               </span>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="border-t border-darkBorder pt-4 mt-4 text-[10px] font-mono text-neutral-500 leading-relaxed">
-        Synthesized via Llama 3.3 (Groq) intelligence layer. Pipeline latency:{" "}
-        <span className="text-neutral-300 font-bold">{(processing_time_ms / 1000).toFixed(2)}s</span>.
+      <div className="border-t border-darkBorder pt-4 mt-4 text-[10px] font-mono text-neutral-500 leading-relaxed flex items-center justify-between">
+        <span>Synthesized via Llama 3.3 (Groq)</span>
+        <span className="text-neutral-300 font-bold bg-white/5 px-2 py-1 rounded">{(processing_time_ms / 1000).toFixed(2)}s</span>
       </div>
     </div>
   );
-
 const renderAgentTraceFeed = () => (
     <div className="card-3d rounded-xl p-5 glow-accent flex flex-col justify-between h-full">
       <div>
