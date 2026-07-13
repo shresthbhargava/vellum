@@ -6,7 +6,6 @@ import Link from "next/link";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowRight,
   Send,
   Sparkles,
   Loader2,
@@ -17,7 +16,6 @@ import {
   Brain,
   MessageSquare,
   Cpu,
-  Clock,
   History,
   Upload,
   X,
