@@ -16,7 +16,7 @@ import {
   Globe,
   BarChart3,
   X,
-  FileStack,
+  FileStack, Clock,
 } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { translations, Language } from "../../utils/translations";
@@ -290,6 +290,14 @@ export default function GeneratePage() {
             >
               <BarChart3 className="w-3.5 h-3.5 text-accent" />
               <span className="text-[10px] font-mono text-neutral-300 uppercase tracking-wider">Validate Idea</span>
+            </Link>
+
+            <Link
+              href="/history"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-none bg-[#050505] border border-darkBorder hover:border-accent/40 transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="text-[10px] font-mono text-neutral-300 uppercase tracking-wider">History</span>
             </Link>
 
             {/* Language Selector Dropdown */}

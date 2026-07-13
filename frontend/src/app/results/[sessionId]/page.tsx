@@ -1241,7 +1241,7 @@ export default function ResultsPage() {
 
         <div className="flex items-center gap-6 py-2 select-none">
           {/* Circular indicator */}
-          <div className="relative shrink-0" style={{ width: '96px', height: '96px' }}>
+          <div className="relative shrink-0 opacity-40" style={{ width: '96px', height: '96px' }}>
             <svg
               width="96"
               height="96"
