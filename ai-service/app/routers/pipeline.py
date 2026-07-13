@@ -1,23 +1,5 @@
-""
-Vellum Pipeline -- SSE Streaming Endpoints
-
-WHAT THIS FILE DOES:
-- POST /api/pipeline/stream -- The MAIN endpoint. Runs the full BRD pipeline
-  and emits Server-Sent Events (SSE) as each agent completes.
-  Frontend gets live progress instead of waiting 30+ seconds for one response.
-
-HOW SSE WORKS:
-1. Frontend calls fetch() with the request body.
-2. Backend returns a StreamingResponse with Content-Type: text/event-stream.
-3. Backend yields "data: {...json...}\n\n" after each pipeline step.
-4. Frontend reads the stream and updates UI in real-time.
-
-WHY ASYNC GENERATOR + run_in_executor:
-- The current agents (extraction_agent, brd_agent, etc.) are synchronous --
-  they call Groq via blocking HTTP.
-- FastAPI's StreamingResponse needs an async generator.
-- asyncio.to_thread() runs the sync agent in a thread pool so the event loop
-  isn't blocked while waiting for Groq to respond.
+"""
+Vellum Pipeline - SSE Streaming Endpoints
 """
 
 import asyncio
@@ -39,7 +21,6 @@ from app.models.db_models import BRDSession
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
-# In-memory cache (fast lookups during same server run)
 sessions: dict[str, dict] = {}
 
 
@@ -51,17 +32,11 @@ class GenerateRequest(BaseModel):
     file_content: Optional[str] = None
 
 
-# ── SSE helpers ────────────────────────────────────────────────────
-
 def sse_event(data: dict) -> str:
-    """Format a dict as an SSE event string."""
     return f"data: {json.dumps(data, default=str)}\n\n"
 
 
-# ── Database helpers ───────────────────────────────────────────────
-
 def save_session_to_db(session_id: str, data: dict):
-    """Persist session to Supabase PostgreSQL. Creates or updates."""
     db = SessionLocal()
     try:
         existing = db.query(BRDSession).filter(BRDSession.id == session_id).first()
@@ -82,7 +57,6 @@ def save_session_to_db(session_id: str, data: dict):
 
 
 def load_session_from_db(session_id: str) -> dict | None:
-    """Load session from Supabase. Returns None if not found."""
     db = SessionLocal()
     try:
         row = db.query(BRDSession).filter(BRDSession.id == session_id).first()
@@ -113,26 +87,8 @@ def load_session_from_db(session_id: str) -> dict | None:
         db.close()
 
 
-# ── SSE Streaming endpoint ─────────────────────────────────────────
-
 @router.post("/stream")
 async def stream_generate(request: Request):
-    """
-    Run the full BRD pipeline and emit SSE events as each step completes.
-
-    SSE event types the frontend should handle:
-      { "type": "session", "session_id": "..." }       -- first event, gives the ID
-      { "type": "step", "step": "input", "status": "complete" }
-      { "type": "step", "step": "extraction", "status": "complete", "data": {...} }
-      { "type": "step", "step": "validation", "status": "complete", "data": {...} }
-      { "type": "step", "step": "brd", "status": "complete", "data": {...} }
-      { "type": "step", "step": "critic", "status": "complete", "data": {...} }
-      { "type": "step", "step": "saving", "status": "complete" }
-      { "type": "done", "session_id": "...", "processing_time_ms": 12345 }
-      { "type": "error", "message": "..." }
-    """
-
-    # Read the body early (before the async generator runs)
     body = await request.json()
     req = GenerateRequest(**body)
 
@@ -141,16 +97,13 @@ async def stream_generate(request: Request):
         session_id = str(uuid.uuid4())
         logger.info("SSE Pipeline start | session=%s | type=%s", session_id, req.input_type)
 
-        # ── Step 0: Send session ID immediately ──────────────────
         yield sse_event({"type": "session", "session_id": session_id})
 
         try:
-            # ── Step 1: Build raw idea ───────────────────────────
             raw_idea = req.text_input
             if req.startup_name:
                 raw_idea = f"{req.startup_name}. {raw_idea}"
 
-            # Step 1b: If image uploaded, extract text
             if req.file_content and req.input_type in ("image", "pdf"):
                 try:
                     image_text = await asyncio.to_thread(
@@ -168,7 +121,6 @@ async def stream_generate(request: Request):
                 "detail": f"Processed {len(raw_idea)} characters of input",
             })
 
-            # ── Step 2: Extraction ────────────────────────────────
             yield sse_event({"type": "step", "step": "extraction", "status": "running"})
             extracted = await asyncio.to_thread(
                 extraction_agent.extract_business_data, raw_idea
@@ -185,7 +137,6 @@ async def stream_generate(request: Request):
                 },
             })
 
-            # ── Step 2b: Validation (skip if no validation_agent) ─
             validation_result = None
             yield sse_event({"type": "step", "step": "validation", "status": "running"})
             try:
@@ -213,7 +164,6 @@ async def stream_generate(request: Request):
                     },
                 })
 
-            # ── Step 3: BRD Generation ────────────────────────────
             yield sse_event({"type": "step", "step": "brd", "status": "running"})
             brd_dict = await asyncio.to_thread(
                 brd_agent.generate_brd_draft, extracted_dict
@@ -228,7 +178,6 @@ async def stream_generate(request: Request):
                 },
             })
 
-            # ── Step 4: Critic Review ─────────────────────────────
             yield sse_event({"type": "step", "step": "critic", "status": "running"})
             try:
                 review = await asyncio.to_thread(
@@ -247,26 +196,25 @@ async def stream_generate(request: Request):
                 },
             })
 
-            # ── Step 5: Build traces + final session ──────────────
             traces = [
                 {
                     "step": "1", "agent": "InputAgent",
-                    "output_summary": f"Validated input for {req.startup_name or 'submitted idea'}. Input classified as {req.input_type} modality with {len(raw_idea)} characters.",
+                    "output_summary": f"Validated input for {req.startup_name or 'submitted idea'}. {req.input_type} modality, {len(raw_idea)} chars.",
                     "tokens_used": 0,
                 },
                 {
                     "step": "2", "agent": "ExtractionAgent",
-                    "output_summary": f"Extracted business data for {extracted.business_name} in {extracted.domain} domain. Confidence: {extracted_dict.get('confidence', 'N/A')}.",
+                    "output_summary": f"Extracted data for {extracted.business_name} in {extracted.domain} domain. Confidence: {extracted_dict.get('confidence', 'N/A')}.",
                     "tokens_used": 0,
                 },
                 {
                     "step": "3", "agent": "BRDAgent",
-                    "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} functional requirements and {len(brd_dict.get('user_stories', []))} user stories.",
+                    "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} features and {len(brd_dict.get('user_stories', []))} user stories.",
                     "tokens_used": 0,
                 },
                 {
                     "step": "4", "agent": "QualityAgent",
-                    "output_summary": f"BRD quality review: {review.get('overall_score', 'N/A')}/10 -- {review.get('overall_verdict', 'N/A')}.",
+                    "output_summary": f"Quality review: {review.get('overall_score', 'N/A')}/10 - {review.get('overall_verdict', 'N/A')}.",
                     "tokens_used": 0,
                 },
             ]
@@ -308,10 +256,8 @@ async def stream_generate(request: Request):
                 "error": None,
             }
 
-            # Cache in memory
             sessions[session_id] = session_data
 
-            # ── Step 6: Save to database ──────────────────────────
             yield sse_event({"type": "step", "step": "saving", "status": "running"})
             await asyncio.to_thread(save_session_to_db, session_id, {
                 "startup_name": req.startup_name or extracted.business_name,
@@ -326,7 +272,6 @@ async def stream_generate(request: Request):
             })
             yield sse_event({"type": "step", "step": "saving", "status": "complete"})
 
-            # ── Done ──────────────────────────────────────────────
             logger.info("SSE Pipeline complete | session=%s | %.0fms", session_id, elapsed)
             yield sse_event({
                 "type": "done",
@@ -348,16 +293,13 @@ async def stream_generate(request: Request):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable nginx buffering (important for Render)
+            "X-Accel-Buffering": "no",
         },
     )
 
 
-# ── Non-streaming generate (kept for backward compat) ──────────────
-
 @router.post("/generate")
 def generate(request: GenerateRequest):
-    """Original synchronous generate -- kept as fallback."""
     start = time.time()
     session_id = str(uuid.uuid4())
     logger.info("Pipeline start | session=%s | type=%s", session_id, request.input_type)
@@ -447,11 +389,8 @@ def generate(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── Session lookup endpoints ───────────────────────────────────────
-
 @router.get("/sessions/{session_id}/agents")
 def get_session(session_id: str):
-    """Matches the URL the results page polls."""
     if session_id in sessions:
         return sessions[session_id]
     db_session = load_session_from_db(session_id)
