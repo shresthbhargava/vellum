@@ -42,7 +42,7 @@ interface AgentStep {
 
 // ─── Constants ───────────────────────────────────────────────────
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://vellum-ai-service.onrender.com";
+const BACKEND_URL = "https://vellum-omex.onrender.com";
 
 const PIPELINE_STEPS: Omit<AgentStep, "status" | "message">[] = [
   { step: 0, agent: "system",   icon: <Cpu size={18} />,           label: "Initializing Pipeline" },
