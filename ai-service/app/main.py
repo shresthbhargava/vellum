@@ -52,6 +52,7 @@ app.include_router(critic.router)
 app.include_router(multimodal.router)
 app.include_router(pipeline.router)
 app.include_router(validation.router)  # ← NEW
+app.include_router(sessions.router)
 app.include_router(export.router)
 app.include_router(rag.router)  # add this line
 
