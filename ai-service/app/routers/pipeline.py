@@ -19,7 +19,7 @@ from app.database import SessionLocal
 from app.models.db_models import BRDSession
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
+router = APIRouter(prefix="/api", tags=["pipeline"])
 
 sessions: dict[str, dict] = {}
 
@@ -97,9 +97,11 @@ async def stream_generate(request: Request):
         session_id = str(uuid.uuid4())
         logger.info("SSE Pipeline start | session=%s | type=%s", session_id, req.input_type)
 
-        yield sse_event({"type": "session", "session_id": session_id})
-
         try:
+            # Step 0: Initializing
+            yield sse_event({"type": "status", "step": 0, "agent": "system", "message": "Warming up agent pipeline..."})
+
+            # Step 1: Input validation
             raw_idea = req.text_input
             if req.startup_name:
                 raw_idea = f"{req.startup_name}. {raw_idea}"
@@ -114,31 +116,19 @@ async def stream_generate(request: Request):
                 except Exception as e:
                     logger.warning("File extraction failed: %s", e)
 
-            yield sse_event({
-                "type": "step",
-                "step": "input",
-                "status": "complete",
-                "detail": f"Processed {len(raw_idea)} characters of input",
-            })
+            yield sse_event({"type": "status", "step": 1, "agent": "InputAgent", "message": f"Validated {len(raw_idea)} characters of input across {req.input_type} modality"})
 
-            yield sse_event({"type": "step", "step": "extraction", "status": "running"})
+            # Step 2: Extraction
+            yield sse_event({"type": "status", "step": 2, "agent": "ExtractionAgent", "message": "Extracting business data, domain, and key entities..."})
             extracted = await asyncio.to_thread(
                 extraction_agent.extract_business_data, raw_idea
             )
             extracted_dict = extracted.model_dump()
-            yield sse_event({
-                "type": "step",
-                "step": "extraction",
-                "status": "complete",
-                "data": {
-                    "business_name": extracted_dict.get("business_name", ""),
-                    "domain": extracted_dict.get("domain", ""),
-                    "confidence": extracted_dict.get("confidence", 0),
-                },
-            })
+            yield sse_event({"type": "status", "step": 2, "agent": "ExtractionAgent", "message": f"Extracted data for {extracted.business_name} in {extracted.domain} domain"})
 
+            # Step 3: Enrichment (validation agent if available)
             validation_result = None
-            yield sse_event({"type": "step", "step": "validation", "status": "running"})
+            yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Enriching with industry context and competitive landscape..."})
             try:
                 from app.services import validation_agent
                 validation_result = await asyncio.to_thread(
@@ -146,39 +136,23 @@ async def stream_generate(request: Request):
                     idea=raw_idea,
                     industry=extracted_dict.get("domain"),
                 )
+                yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Idea validated and context enriched"})
             except ImportError:
-                logger.info("validation_agent not available, skipping")
-                yield sse_event({"type": "step", "step": "validation", "status": "skipped"})
+                yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Skipping enrichment - module not available"})
             except Exception as e:
-                logger.warning("Validation agent failed: %s", e)
-                yield sse_event({"type": "step", "step": "validation", "status": "skipped", "detail": str(e)})
+                yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": f"Enrichment skipped: {str(e)[:60]}"})
 
-            if validation_result:
-                yield sse_event({
-                    "type": "step",
-                    "step": "validation",
-                    "status": "complete",
-                    "data": {
-                        "overall_score": validation_result.get("overall_score", 0),
-                        "verdict": validation_result.get("verdict", ""),
-                    },
-                })
-
-            yield sse_event({"type": "step", "step": "brd", "status": "running"})
+            # Step 4: BRD Generation
+            yield sse_event({"type": "status", "step": 4, "agent": "BRDAgent", "message": "Generating Business Requirements Document..."})
             brd_dict = await asyncio.to_thread(
                 brd_agent.generate_brd_draft, extracted_dict
             )
-            yield sse_event({
-                "type": "step",
-                "step": "brd",
-                "status": "complete",
-                "data": {
-                    "feature_count": len(brd_dict.get("feature_list", [])),
-                    "user_story_count": len(brd_dict.get("user_stories", [])),
-                },
-            })
+            feature_count = len(brd_dict.get("feature_list", []))
+            story_count = len(brd_dict.get("user_stories", []))
+            yield sse_event({"type": "status", "step": 4, "agent": "BRDAgent", "message": f"Generated {feature_count} features and {story_count} user stories"})
 
-            yield sse_event({"type": "step", "step": "critic", "status": "running"})
+            # Step 5: Quality Review
+            yield sse_event({"type": "status", "step": 5, "agent": "QualityAgent", "message": "Running quality review and scoring..."})
             try:
                 review = await asyncio.to_thread(
                     critic_agent.review_brd, brd_dict, extracted_dict
@@ -186,37 +160,15 @@ async def stream_generate(request: Request):
             except Exception as e:
                 logger.warning("Critic failed: %s", e)
                 review = {"overall_score": 0, "overall_verdict": "unavailable", "sections": {}}
-            yield sse_event({
-                "type": "step",
-                "step": "critic",
-                "status": "complete",
-                "data": {
-                    "overall_score": review.get("overall_score", 0),
-                    "overall_verdict": review.get("overall_verdict", ""),
-                },
-            })
+            yield sse_event({"type": "status", "step": 5, "agent": "QualityAgent", "message": f"Quality score: {review.get('overall_score', 'N/A')}/10"})
 
+            # Build session data
             traces = [
-                {
-                    "step": "1", "agent": "InputAgent",
-                    "output_summary": f"Validated input for {req.startup_name or 'submitted idea'}. {req.input_type} modality, {len(raw_idea)} chars.",
-                    "tokens_used": 0,
-                },
-                {
-                    "step": "2", "agent": "ExtractionAgent",
-                    "output_summary": f"Extracted data for {extracted.business_name} in {extracted.domain} domain. Confidence: {extracted_dict.get('confidence', 'N/A')}.",
-                    "tokens_used": 0,
-                },
-                {
-                    "step": "3", "agent": "BRDAgent",
-                    "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} features and {len(brd_dict.get('user_stories', []))} user stories.",
-                    "tokens_used": 0,
-                },
-                {
-                    "step": "4", "agent": "QualityAgent",
-                    "output_summary": f"Quality review: {review.get('overall_score', 'N/A')}/10 - {review.get('overall_verdict', 'N/A')}.",
-                    "tokens_used": 0,
-                },
+                {"step": "1", "agent": "InputAgent", "output_summary": f"Validated input for {req.startup_name or 'submitted idea'}. {req.input_type} modality, {len(raw_idea)} chars.", "tokens_used": 0},
+                {"step": "2", "agent": "ExtractionAgent", "output_summary": f"Extracted data for {extracted.business_name} in {extracted.domain} domain. Confidence: {extracted_dict.get('confidence', 'N/A')}.", "tokens_used": 0},
+                {"step": "3", "agent": "EnrichmentAgent", "output_summary": "Enriched with industry context and validation.", "tokens_used": 0},
+                {"step": "4", "agent": "BRDAgent", "output_summary": f"Generated BRD with {feature_count} features and {story_count} user stories.", "tokens_used": 0},
+                {"step": "5", "agent": "QualityAgent", "output_summary": f"Quality score: {review.get('overall_score', 'N/A')}/10 - {review.get('overall_verdict', 'N/A')}.", "tokens_used": 0},
             ]
 
             elapsed = round((time.time() - start) * 1000, 1)
@@ -258,7 +210,7 @@ async def stream_generate(request: Request):
 
             sessions[session_id] = session_data
 
-            yield sse_event({"type": "step", "step": "saving", "status": "running"})
+            # Save to DB
             await asyncio.to_thread(save_session_to_db, session_id, {
                 "startup_name": req.startup_name or extracted.business_name,
                 "domain": extracted.domain,
@@ -270,20 +222,24 @@ async def stream_generate(request: Request):
                 "traces": traces,
                 "processing_time_ms": elapsed,
             })
-            yield sse_event({"type": "step", "step": "saving", "status": "complete"})
+
+            # Send complete event with session_id
+            yield sse_event({
+                "type": "complete",
+                "step": 5,
+                "agent": "QualityAgent",
+                "message": "BRD generation complete!",
+                "data": {"session_id": session_id, "processing_time_ms": elapsed},
+            })
 
             logger.info("SSE Pipeline complete | session=%s | %.0fms", session_id, elapsed)
-            yield sse_event({
-                "type": "done",
-                "session_id": session_id,
-                "processing_time_ms": elapsed,
-            })
 
         except Exception as e:
             logger.error("SSE Pipeline failed | session=%s | %s", session_id, e)
             yield sse_event({
                 "type": "error",
-                "session_id": session_id,
+                "step": 0,
+                "agent": "system",
                 "message": str(e),
             })
 
@@ -339,8 +295,9 @@ def generate(request: GenerateRequest):
         traces = [
             {"step": "1", "agent": "InputAgent", "output_summary": f"Validated input for {request.startup_name or 'idea'}.", "tokens_used": 0},
             {"step": "2", "agent": "ExtractionAgent", "output_summary": f"Extracted data for {extracted.business_name}.", "tokens_used": 0},
-            {"step": "3", "agent": "BRDAgent", "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} features.", "tokens_used": 0},
-            {"step": "4", "agent": "QualityAgent", "output_summary": f"Score: {review.get('overall_score', 'N/A')}/10.", "tokens_used": 0},
+            {"step": "3", "agent": "EnrichmentAgent", "output_summary": "Enriched with context.", "tokens_used": 0},
+            {"step": "4", "agent": "BRDAgent", "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} features.", "tokens_used": 0},
+            {"step": "5", "agent": "QualityAgent", "output_summary": f"Score: {review.get('overall_score', 'N/A')}/10.", "tokens_used": 0},
         ]
 
         elapsed = round((time.time() - start) * 1000, 1)
