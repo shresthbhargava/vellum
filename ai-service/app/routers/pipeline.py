@@ -1,24 +1,67 @@
-import uuid
+""
+Vellum Pipeline — SSE Streaming Endpoints
+
+WHAT THIS FILE DOES:
+- POST /api/pipeline/stream — The MAIN endpoint. Runs the full BRD pipeline
+  and emits Server-Sent Events (SSE) as each agent completes.
+  Frontend gets live progress instead of waiting 30+ seconds for one response.
+
+HOW SSE WORKS:
+1. Frontend calls fetch() with the request body.
+2. Backend returns a StreamingResponse with Content-Type: text/event-stream.
+3. Backend yields "data: {...json...}\n\n" after each pipeline step.
+4. Frontend reads the stream and updates UI in real-time.
+
+WHY ASYNC GENERATOR + run_in_executor:
+- The current agents (extraction_agent, brd_agent, etc.) are synchronous —
+  they call Groq via blocking HTTP.
+- FastAPI's StreamingResponse needs an async generator.
+- asyncio.to_thread() runs the sync agent in a thread pool so the event loop
+  isn't blocked while waiting for Groq to respond.
+"""
+
+import asyncio
+import json
 import time
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+import uuid
+from typing import AsyncGenerator
+
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from typing import Optional
-from app.services import extraction_agent, brd_agent, critic_agent, multimodal_parser, validation_agent
-from app.services import rag_service
+
+from app.services import extraction_agent, brd_agent, critic_agent, multimodal_parser
 from app.utils.logging_config import get_logger
 from app.database import SessionLocal
 from app.models.db_models import BRDSession
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api", tags=["pipeline"])
+router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
-# ── In-memory store (kept as cache, DB is source of truth) ──────
+# In-memory cache (fast lookups during same server run)
 sessions: dict[str, dict] = {}
 
-# ── Database helpers ─────────────────────────────────────────────
+
+class GenerateRequest(BaseModel):
+    startup_name: str = ""
+    text_input: str = ""
+    input_type: str = "text"
+    filename: Optional[str] = None
+    file_content: Optional[str] = None
+
+
+# ── SSE helpers ────────────────────────────────────────────────────
+
+def sse_event(data: dict) -> str:
+    """Format a dict as an SSE event string."""
+    return f"data: {json.dumps(data, default=str)}\n\n"
+
+
+# ── Database helpers ───────────────────────────────────────────────
 
 def save_session_to_db(session_id: str, data: dict):
-    """Persist a session to SQLite so it survives restarts."""
+    """Persist session to Supabase PostgreSQL. Creates or updates."""
     db = SessionLocal()
     try:
         existing = db.query(BRDSession).filter(BRDSession.id == session_id).first()
@@ -27,128 +70,340 @@ def save_session_to_db(session_id: str, data: dict):
                 if hasattr(existing, key):
                     setattr(existing, key, value)
         else:
-            db_session = BRDSession(id=session_id, **data)
-            db.add(db_session)
+            db_record = BRDSession(id=session_id, **data)
+            db.add(db_record)
         db.commit()
-        logger.info("Session saved to DB | %s", session_id)
+        logger.info("Session saved to DB: %s", session_id)
     except Exception as e:
         db.rollback()
-        logger.warning("DB save failed: %s", e)
+        logger.error("DB save failed for %s: %s", session_id, e)
     finally:
         db.close()
 
 
 def load_session_from_db(session_id: str) -> dict | None:
-    """Load a session from SQLite. Returns None if not found."""
+    """Load session from Supabase. Returns None if not found."""
     db = SessionLocal()
     try:
         row = db.query(BRDSession).filter(BRDSession.id == session_id).first()
         if row:
             return {
                 "session_id": row.id,
-                "status": "success",
                 "created_at": str(row.created_at),
                 "startup_name": row.startup_name,
                 "domain": row.domain,
                 "raw_input": row.raw_input,
-                "traces": row.traces or [],
+                "extracted_data": row.extracted_data or {},
+                "enriched_data": row.enriched_data or {},
                 "brd": row.brd_data or {},
-                "critic": row.quality_review or {},
                 "validation": row.validation_data or {},
-                "extraction": row.extracted_data or {},
+                "quality_review": row.quality_review or {},
+                "traces": row.traces or [],
+                "vellum_score": row.vellum_score,
                 "processing_time_ms": row.processing_time_ms,
+                "status": "success",
                 "gcs_uri": None,
                 "error": None,
             }
         return None
     except Exception as e:
-        logger.warning("DB load failed: %s", e)
+        logger.error("DB load failed for %s: %s", session_id, e)
         return None
     finally:
         db.close()
 
 
-# ── Request model ───────────────────────────────────────────────
+# ── SSE Streaming endpoint ─────────────────────────────────────────
 
-class GenerateRequest(BaseModel):
-    startup_name: str = ""
-    text_input: str = ""
-    input_type: str = "text"
-    filename: Optional[str] = None
-    rag_session_id: Optional[str] = None
-    file_content: Optional[str] = None
+@router.post("/stream")
+async def stream_generate(request: Request):
+    """
+    Run the full BRD pipeline and emit SSE events as each step completes.
+
+    SSE event types the frontend should handle:
+      { "type": "session", "session_id": "..." }       — first event, gives the ID
+      { "type": "step", "step": "input", "status": "complete" }
+      { "type": "step", "step": "extraction", "status": "complete", "data": {...} }
+      { "type": "step", "step": "validation", "status": "complete", "data": {...} }
+      { "type": "step", "step": "brd", "status": "complete", "data": {...} }
+      { "type": "step", "step": "critic", "status": "complete", "data": {...} }
+      { "type": "step", "step": "saving", "status": "complete" }
+      { "type": "done", "session_id": "...", "processing_time_ms": 12345 }
+      { "type": "error", "message": "..." }
+    """
+
+    # Read the body early (before the async generator runs)
+    body = await request.json()
+    req = GenerateRequest(**body)
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        start = time.time()
+        session_id = str(uuid.uuid4())
+        logger.info("SSE Pipeline start | session=%s | type=%s", session_id, req.input_type)
+
+        # ── Step 0: Send session ID immediately ──────────────────
+        yield sse_event({"type": "session", "session_id": session_id})
+
+        try:
+            # ── Step 1: Build raw idea ───────────────────────────
+            raw_idea = req.text_input
+            if req.startup_name:
+                raw_idea = f"{req.startup_name}. {raw_idea}"
+
+            # Step 1b: If image uploaded, extract text
+            if req.file_content and req.input_type in ("image", "pdf"):
+                try:
+                    image_text = await asyncio.to_thread(
+                        multimodal_parser.extract_text_from_images,
+                        [req.file_content],
+                    )
+                    raw_idea = f"{raw_idea}\n\n{image_text}" if raw_idea else image_text
+                except Exception as e:
+                    logger.warning("File extraction failed: %s", e)
+
+            yield sse_event({
+                "type": "step",
+                "step": "input",
+                "status": "complete",
+                "detail": f"Processed {len(raw_idea)} characters of input",
+            })
+
+            # ── Step 2: Extraction ────────────────────────────────
+            yield sse_event({"type": "step", "step": "extraction", "status": "running"})
+            extracted = await asyncio.to_thread(
+                extraction_agent.extract_business_data, raw_idea
+            )
+            extracted_dict = extracted.model_dump()
+            yield sse_event({
+                "type": "step",
+                "step": "extraction",
+                "status": "complete",
+                "data": {
+                    "business_name": extracted_dict.get("business_name", ""),
+                    "domain": extracted_dict.get("domain", ""),
+                    "confidence": extracted_dict.get("confidence", 0),
+                },
+            })
+
+            # ── Step 2b: Validation (skip if no validation_agent) ─
+            validation_result = None
+            yield sse_event({"type": "step", "step": "validation", "status": "running"})
+            try:
+                from app.services import validation_agent
+                validation_result = await asyncio.to_thread(
+                    validation_agent.validate_idea,
+                    idea=raw_idea,
+                    industry=extracted_dict.get("domain"),
+                )
+            except ImportError:
+                logger.info("validation_agent not available, skipping")
+                yield sse_event({"type": "step", "step": "validation", "status": "skipped"})
+            except Exception as e:
+                logger.warning("Validation agent failed: %s", e)
+                yield sse_event({"type": "step", "step": "validation", "status": "skipped", "detail": str(e)})
+
+            if validation_result:
+                yield sse_event({
+                    "type": "step",
+                    "step": "validation",
+                    "status": "complete",
+                    "data": {
+                        "overall_score": validation_result.get("overall_score", 0),
+                        "verdict": validation_result.get("verdict", ""),
+                    },
+                })
+
+            # ── Step 3: BRD Generation ────────────────────────────
+            yield sse_event({"type": "step", "step": "brd", "status": "running"})
+            brd_dict = await asyncio.to_thread(
+                brd_agent.generate_brd_draft, extracted_dict
+            )
+            yield sse_event({
+                "type": "step",
+                "step": "brd",
+                "status": "complete",
+                "data": {
+                    "feature_count": len(brd_dict.get("feature_list", [])),
+                    "user_story_count": len(brd_dict.get("user_stories", [])),
+                },
+            })
+
+            # ── Step 4: Critic Review ─────────────────────────────
+            yield sse_event({"type": "step", "step": "critic", "status": "running"})
+            try:
+                review = await asyncio.to_thread(
+                    critic_agent.review_brd, brd_dict, extracted_dict
+                )
+            except Exception as e:
+                logger.warning("Critic failed: %s", e)
+                review = {"overall_score": 0, "overall_verdict": "unavailable", "sections": {}}
+            yield sse_event({
+                "type": "step",
+                "step": "critic",
+                "status": "complete",
+                "data": {
+                    "overall_score": review.get("overall_score", 0),
+                    "overall_verdict": review.get("overall_verdict", ""),
+                },
+            })
+
+            # ── Step 5: Build traces + final session ──────────────
+            traces = [
+                {
+                    "step": "1", "agent": "InputAgent",
+                    "output_summary": f"Validated input for {req.startup_name or 'submitted idea'}. Input classified as {req.input_type} modality with {len(raw_idea)} characters.",
+                    "tokens_used": 0,
+                },
+                {
+                    "step": "2", "agent": "ExtractionAgent",
+                    "output_summary": f"Extracted business data for {extracted.business_name} in {extracted.domain} domain. Confidence: {extracted_dict.get('confidence', 'N/A')}.",
+                    "tokens_used": 0,
+                },
+                {
+                    "step": "3", "agent": "BRDAgent",
+                    "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} functional requirements and {len(brd_dict.get('user_stories', []))} user stories.",
+                    "tokens_used": 0,
+                },
+                {
+                    "step": "4", "agent": "QualityAgent",
+                    "output_summary": f"BRD quality review: {review.get('overall_score', 'N/A')}/10 — {review.get('overall_verdict', 'N/A')}.",
+                    "tokens_used": 0,
+                },
+            ]
+
+            elapsed = round((time.time() - start) * 1000, 1)
+
+            session_data = {
+                "session_id": session_id,
+                "status": "success",
+                "startup_name": req.startup_name or extracted.business_name,
+                "traces": traces,
+                "brd": {
+                    "executive_summary": brd_dict.get("executive_summary", ""),
+                    "problem_statement": brd_dict.get("problem_statement", {}),
+                    "objectives": brd_dict.get("objectives", []),
+                    "scope": brd_dict.get("scope", {}),
+                    "stakeholders": brd_dict.get("stakeholders", []),
+                    "target_market": {"content": brd_dict.get("target_users_summary", "")},
+                    "solution_overview": {"content": brd_dict.get("proposed_solution", "")},
+                    "functional_requirements": [
+                        {"id": f"FR-{i+1}", "requirement": f, "priority": "High" if i == 0 else "Medium"}
+                        for i, f in enumerate(brd_dict.get("feature_list", []))
+                    ],
+                    "non_functional_requirements": brd_dict.get("non_functional_requirements", []),
+                    "user_stories": brd_dict.get("user_stories", []),
+                    "technical_architecture": brd_dict.get("technical_architecture", {}),
+                    "success_metrics": brd_dict.get("success_metrics", []),
+                    "overall_confidence": extracted_dict.get("confidence", 0),
+                    "competitors": brd_dict.get("competitors", []),
+                    "swot": brd_dict.get("swot", {}),
+                    "risks": brd_dict.get("risks", []),
+                    "timeline": brd_dict.get("timeline", []),
+                },
+                "critic": review,
+                "validation": validation_result,
+                "extraction": extracted_dict,
+                "processing_time_ms": elapsed,
+                "gcs_uri": None,
+                "error": None,
+            }
+
+            # Cache in memory
+            sessions[session_id] = session_data
+
+            # ── Step 6: Save to database ──────────────────────────
+            yield sse_event({"type": "step", "step": "saving", "status": "running"})
+            await asyncio.to_thread(save_session_to_db, session_id, {
+                "startup_name": req.startup_name or extracted.business_name,
+                "domain": extracted.domain,
+                "raw_input": req.text_input,
+                "extracted_data": extracted_dict,
+                "brd_data": brd_dict,
+                "validation_data": validation_result,
+                "quality_review": review,
+                "traces": traces,
+                "processing_time_ms": elapsed,
+            })
+            yield sse_event({"type": "step", "step": "saving", "status": "complete"})
+
+            # ── Done ──────────────────────────────────────────────
+            logger.info("SSE Pipeline complete | session=%s | %.0fms", session_id, elapsed)
+            yield sse_event({
+                "type": "done",
+                "session_id": session_id,
+                "processing_time_ms": elapsed,
+            })
+
+        except Exception as e:
+            logger.error("SSE Pipeline failed | session=%s | %s", session_id, e)
+            yield sse_event({
+                "type": "error",
+                "session_id": session_id,
+                "message": str(e),
+            })
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering (important for Render)
+        },
+    )
 
 
-# ── Pipeline endpoint ───────────────────────────────────────────
+# ── Non-streaming generate (kept for backward compat) ──────────────
 
 @router.post("/generate")
 def generate(request: GenerateRequest):
+    """Original synchronous generate — kept as fallback."""
     start = time.time()
     session_id = str(uuid.uuid4())
     logger.info("Pipeline start | session=%s | type=%s", session_id, request.input_type)
 
     try:
-        # Step 1: Build raw idea
         raw_idea = request.text_input
         if request.startup_name:
             raw_idea = f"{request.startup_name}. {raw_idea}"
 
-        # Step 1b: If image uploaded, extract text from it
         if request.file_content and request.input_type in ("image", "pdf"):
             try:
                 image_text = multimodal_parser.extract_text_from_images([request.file_content])
                 raw_idea = f"{raw_idea}\n\n{image_text}" if raw_idea else image_text
             except Exception as e:
-                logger.warning("File extraction failed, continuing with text: %s", e)
+                logger.warning("File extraction failed: %s", e)
 
-        # Step 1.5: RAG context
-        rag_context = ""
-        if request.rag_session_id:
-            try:
-                rag_context = rag_service.retrieve_context(request.rag_session_id, raw_idea, top_k=5)
-                if rag_context:
-                    raw_idea = f"{raw_idea}\n\n--- Reference Documents ---\n{rag_context}"
-                    logger.info("RAG context injected: %d chars", len(rag_context))
-            except Exception as e:
-                logger.warning("RAG retrieval failed: %s", e)
-        # Step 2: Extract
         extracted = extraction_agent.extract_business_data(raw_idea)
         extracted_dict = extracted.model_dump()
 
-        # Step 2b: Validate idea
         validation_result = None
         try:
+            from app.services import validation_agent
             validation_result = validation_agent.validate_idea(
-                idea=raw_idea,
-                industry=extracted_dict.get("domain"),
+                idea=raw_idea, industry=extracted_dict.get("domain"),
             )
-        except Exception as e:
-            logger.warning("Validation agent failed, skipping: %s", e)
+        except (ImportError, Exception) as e:
+            logger.warning("Validation skipped: %s", e)
 
-        # Step 3: BRD
         brd_dict = brd_agent.generate_brd_draft(extracted_dict)
 
-        # Step 4: Critic
         try:
             review = critic_agent.review_brd(brd_dict, extracted_dict)
         except Exception as e:
-            logger.warning("Critic failed, skipping: %s", e)
+            logger.warning("Critic failed: %s", e)
             review = {"overall_score": 0, "overall_verdict": "unavailable", "sections": {}}
 
-        # Step 5: Map to the format the results page expects
         traces = [
-            {"step": "1", "agent": "InputAgent", "output_summary": f"Validated input syntax and format for {request.startup_name or 'submitted idea'}. Input classified as {request.input_type} modality with {len(raw_idea)} characters of raw content.", "tokens_used": 0},
-            {"step": "2", "agent": "ExtractionAgent", "output_summary": f"Extracted business data for {extracted.business_name} in {extracted.domain} domain. Idea scored {validation_result.get('overall_score', 'N/A')}/10 ({validation_result.get('verdict', 'N/A')}).", "tokens_used": 0},
-            {"step": "3", "agent": "EnrichmentAgent", "output_summary": f"Enriched {extracted.business_name} with industry context from {extracted.domain} sector. Mapped competitive landscape and technical standards.", "tokens_used": 0},
-            {"step": "4", "agent": "BRDAgent", "output_summary": f"Generated comprehensive BRD with {len(brd_dict.get('feature_list', []))} functional requirements, {len(brd_dict.get('user_stories', []))} user stories, and full SWOT analysis.", "tokens_used": 0},
-            {"step": "5", "agent": "QualityAgent", "output_summary": f"BRD quality review complete. Overall score: {review.get('overall_score', 'N/A')}/10 — verdict: {review.get('overall_verdict', 'N/A')}.", "tokens_used": 0},
+            {"step": "1", "agent": "InputAgent", "output_summary": f"Validated input for {request.startup_name or 'idea'}.", "tokens_used": 0},
+            {"step": "2", "agent": "ExtractionAgent", "output_summary": f"Extracted data for {extracted.business_name}.", "tokens_used": 0},
+            {"step": "3", "agent": "BRDAgent", "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} features.", "tokens_used": 0},
+            {"step": "4", "agent": "QualityAgent", "output_summary": f"Score: {review.get('overall_score', 'N/A')}/10.", "tokens_used": 0},
         ]
 
         elapsed = round((time.time() - start) * 1000, 1)
-
         session_data = {
-            "session_id": session_id,
-            "status": "success",
+            "session_id": session_id, "status": "success",
             "startup_name": request.startup_name or extracted.business_name,
             "traces": traces,
             "brd": {
@@ -173,72 +428,35 @@ def generate(request: GenerateRequest):
                 "risks": brd_dict.get("risks", []),
                 "timeline": brd_dict.get("timeline", []),
             },
-            "critic": review,
-            "validation": validation_result,
-            "extraction": extracted_dict,
-            "processing_time_ms": elapsed,
-            "gcs_uri": None,
-            "error": None,
+            "critic": review, "validation": validation_result,
+            "extraction": extracted_dict, "processing_time_ms": elapsed,
+            "gcs_uri": None, "error": None,
         }
-
-        # ── In-memory cache ──────────────────────────────────────
         sessions[session_id] = session_data
-        
-        # ── Compute Vellum Score ─────────────────────────────────
-        # Blends validation score (40%) + BRD quality score (60%)
-        # If validation failed, use only critic score
-        validation_score = validation_result.get("overall_score", 0) if validation_result else 0
-        critic_score = review.get("overall_score", 0) if review else 0
-        if validation_score > 0 and critic_score > 0:
-            vellum_score = round(0.4 * validation_score + 0.6 * critic_score, 1)
-        elif critic_score > 0:
-            vellum_score = round(critic_score, 1)
-        else:
-            vellum_score = None
-
-        session_data["vellum_score"] = vellum_score
-
-        # ── Persist to database ──────────────────────────────────
         save_session_to_db(session_id, {
             "startup_name": request.startup_name or extracted.business_name,
-            "domain": extracted.domain,
-            "raw_input": request.text_input or "",
-            "extracted_data": extracted_dict,
-            "brd_data": session_data["brd"],
-            "validation_data": validation_result,
-            "quality_review": review,
-            "traces": traces,
-            "processing_time_ms": elapsed,
+            "domain": extracted.domain, "raw_input": request.text_input,
+            "extracted_data": extracted_dict, "brd_data": brd_dict,
+            "validation_data": validation_result, "quality_review": review,
+            "traces": traces, "processing_time_ms": elapsed,
         })
-
-        logger.info("Pipeline complete | session=%s | %.0fms", session_id, elapsed)
         return {"session_id": session_id, "status": "processing"}
 
     except Exception as e:
         logger.error("Pipeline failed | session=%s | %s", session_id, e)
-        sessions[session_id] = {
-            "session_id": session_id,
-            "status": "failed",
-            "startup_name": request.startup_name,
-            "traces": [],
-            "brd": {},
-            "processing_time_ms": 0,
-            "gcs_uri": None,
-            "error": str(e),
-        }
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── Session retrieval (checks memory first, then DB) ────────────
+# ── Session lookup endpoints ───────────────────────────────────────
 
 @router.get("/sessions/{session_id}/agents")
 def get_session(session_id: str):
     """Matches the URL the results page polls."""
     if session_id in sessions:
         return sessions[session_id]
-    # Fallback: load from database
     db_session = load_session_from_db(session_id)
     if db_session:
+        sessions[session_id] = db_session
         return db_session
     raise HTTPException(status_code=404, detail="Session not found")
 
@@ -247,8 +465,8 @@ def get_session(session_id: str):
 def get_results(session_id: str):
     if session_id in sessions:
         return sessions[session_id]
-    # Fallback: load from database
     db_session = load_session_from_db(session_id)
     if db_session:
+        sessions[session_id] = db_session
         return db_session
     raise HTTPException(status_code=404, detail="Session not found")

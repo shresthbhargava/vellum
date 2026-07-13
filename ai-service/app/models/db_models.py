@@ -1,22 +1,17 @@
-"""
-Database table definitions (SQLAlchemy ORM models).
-
-WHY JSON columns instead of normalizing everything?
-- BRD has 15+ nested fields (objectives[], user_stories[], stakeholders[]...)
-- Normalizing = 10+ tables + complex JOINs
-- JSON columns = dump the whole dict, simple to query later
-- SQLAlchemy JSON type works with SQLite's json1 extension
-"""
-
 from sqlalchemy import Column, String, Float, Integer, Text, DateTime, JSON
 from sqlalchemy.sql import func
+
 from app.database import Base
 
 
 class BRDSession(Base):
     """
     Stores every BRD pipeline run.
-    ID = the same UUID you already use as session_id (e.g. "abc-123-def").
+
+    WHY JSON columns for extracted_data, brd_data, etc.?
+    - The BRD structure has 15+ nested fields.
+    - Normalizing would need 10+ tables and complex JOINs.
+    - JSON columns keep it simple: dump the whole dict, query later.
     """
     __tablename__ = "brd_sessions"
 
@@ -28,7 +23,7 @@ class BRDSession(Base):
     domain = Column(String, default="")
     raw_input = Column(Text, default="")
 
-    # Pipeline outputs (JSON dicts)
+    # Pipeline outputs (stored as JSON dicts)
     extracted_data = Column(JSON, default=dict)
     enriched_data = Column(JSON, default=dict)
     brd_data = Column(JSON, default=dict)
@@ -44,7 +39,8 @@ class BRDSession(Base):
 class IdeaValidation(Base):
     """
     Stores standalone idea validations (from /validate page).
-    Separate from BRD sessions — user might validate without generating BRD.
+    Separate from BRD sessions because a user might validate
+    an idea without generating a full BRD.
     """
     __tablename__ = "idea_validations"
 

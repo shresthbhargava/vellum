@@ -1,574 +1,380 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  Upload,
-  FileText,
-  Image as ImageIcon,
-  Sparkles,
-  Play,
-  RotateCcw,
-  AlertCircle,
-  Terminal,
-  Trash2,
-  Globe,
-  BarChart3,
-  X,
-  FileStack, Clock,
-} from "lucide-react";
-import AnimatedBackground from "@/components/AnimatedBackground";
-import { translations, Language } from "../../utils/translations";
+import { Sparkles, Upload, FileText, Clock, Loader2, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://vellum-ai-service.onrender.com";
+
+// ── Step definitions for the progress UI ───────────────────────────
+const PIPELINE_STEPS = [
+  { key: "input",       label: "Processing Input",    icon: FileText,   color: "#60a5fa" },
+  { key: "extraction",  label: "Extracting Data",     icon: Sparkles,   color: "#a78bfa" },
+  { key: "validation",  label: "Validating Idea",     icon: CheckCircle2,color: "#34d399" },
+  { key: "brd",         label: "Generating BRD",      icon: FileText,   color: "#fbbf24" },
+  { key: "critic",      label: "Quality Review",      icon: AlertCircle, color: "#f472b6" },
+  { key: "saving",      label: "Saving to Database",   icon: CheckCircle2,color: "#60a5fa" },
+] as const;
+
+type StepStatus = "pending" | "running" | "complete" | "skipped" | "error";
+
+interface StepState {
+  status: StepStatus;
+  detail?: string;
+  data?: Record<string, unknown>;
+}
 
 export default function GeneratePage() {
   const router = useRouter();
+  const [text, setText] = useState("");
   const [startupName, setStartupName] = useState("");
-  const [textInput, setTextInput] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [base64File, setBase64File] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [inputType, setInputType] = useState<"text" | "image" | "pdf">("text");
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+
   const [isGenerating, setIsGenerating] = useState(false);
-  const [backendStatus] = useState<"online" | "offline">("online");
-  const [error, setError] = useState<string | null>(null);
-  const [ragFiles, setRagFiles] = useState<File[]>([]);
-  const [ragSessionId, setRagSessionId] = useState<string | null>(null);
-  const [ragUploading, setRagUploading] = useState(false);
-  const ragInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [lang, setLang] = useState<Language>('en');
+  const [steps, setSteps] = useState<Record<string, StepState>>({});
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedLang = localStorage.getItem('lang') as Language;
-      if (savedLang && ['en', 'hi', 'es'].includes(savedLang)) {
-        setLang(savedLang);
-      }
-    }
-  }, []);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const changeLanguage = (newLang: Language) => {
-    setLang(newLang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lang', newLang);
-    }
-  };
+  // ── File handler ────────────────────────────────────────────────
+  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // Check backend health on load
-  
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragOver(false);
-  };
-
-  const processFile = (selectedFile: File) => {
-    if (!selectedFile) return;
-
-    // Validate type (PDF or Image)
-    const isPDF = selectedFile.type === "application/pdf";
-    const isImage = selectedFile.type.startsWith("image/");
-
-    if (!isPDF && !isImage) {
-      setError("Supported file formats are PDF and Images (PNG, JPG, WEBP) only.");
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg("File too large. Max 5 MB.");
       return;
     }
 
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      setError("File size exceeds 5MB limit.");
-      return;
-    }
+    setFileName(file.name);
+    setInputType(file.type === "application/pdf" ? "pdf" : "image");
 
-    setError(null);
-    setFile(selectedFile);
-
-    // Convert file to base64
+    // Convert to base64
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") {
-        // Strip data prefix (e.g. data:image/png;base64,)
-        const base64Data = reader.result.split(",")[1];
-        setBase64File(base64Data);
-      }
+      const b64 = (reader.result as string).split(",")[1];
+      setFileContent(b64);
     };
-    reader.onerror = () => {
-      setError("Failed to process file binary contents.");
-    };
-    reader.readAsDataURL(selectedFile);
-  };
+    reader.readAsDataURL(file);
+  }, []);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      processFile(e.target.files[0]);
-    }
-  };
-
-  const handleRemoveFile = () => {
-    setFile(null);
-    setBase64File(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-
-  // -- RAG file handlers --
-  const handleRagFileAdd = (files: FileList | null) => {
-    if (!files) return;
-    const allowed = [".pdf", ".txt", ".md"];
-    const newFiles: File[] = [];
-    for (const f of Array.from(files)) {
-      const ext = "." + f.name.split(".").pop()?.toLowerCase();
-      if (!allowed.includes(ext)) continue;
-      if (f.size > 10 * 1024 * 1024) continue;
-      newFiles.push(f);
-    }
-    if (newFiles.length === 0) return;
-    setRagFiles(prev => [...prev, ...newFiles]);
-    setRagSessionId(null);
-  };
-
-  const handleRagRemove = (index: number) => {
-    setRagFiles(prev => prev.filter((_, i) => i !== index));
-    setRagSessionId(null);
-  };
-
-  const handleRagDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleRagFileAdd(e.dataTransfer.files);
-  };
-
-  const uploadRagFiles = async (): Promise<string | null> => {
-    if (ragFiles.length === 0 || ragSessionId) return ragSessionId;
-    setRagUploading(true);
-    try {
-      const fd = new FormData();
-      ragFiles.forEach(f => fd.append("files", f));
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8500"}/api/rag/upload`, {
-        method: "POST",
-        body: fd,
-      });
-      if (!res.ok) throw new Error("RAG upload failed");
-      const data = await res.json();
-      setRagSessionId(data.rag_session_id);
-      return data.rag_session_id;
-    } catch (e) {
-      console.error("RAG upload error:", e);
-      return null;
-    } finally {
-      setRagUploading(false);
-    }
-  };
-
-  // Typing simulator for demo loader
-    const loadDemo = async () => {
-    setError(null);
-    const localName = "EduStream AI";
-    const localText = "An AI platform that conducts realistic coding interviews for software engineer applicants. It provides live voice interaction, a shared coding canvas with realtime syntax validation, and assesses candidates on code quality, problem solving, and communication. It generates a full evaluation scorecard and feeds metrics to a hiring team dashboard.";
-    
-    setStartupName("");
-    setTextInput("");
-
-    let nameIndex = 0;
-    let textIndex = 0;
-
-    const nameTimer = setInterval(() => {
-      if (nameIndex < localName.length) {
-        setStartupName((prev) => prev + localName[nameIndex]);
-        nameIndex++;
-      } else {
-        clearInterval(nameTimer);
-        const textTimer = setInterval(() => {
-          if (textIndex < localText.length) {
-            setTextInput((prev) => prev + localText[textIndex]);
-            textIndex += 2;
-          } else {
-            setTextInput(localText);
-            clearInterval(textTimer);
-          }
-        }, 10);
-      }
-    }, 25);
-  };
-
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!startupName.trim()) {
-      setError("Please provide a Startup or Product Name.");
-      return;
-    }
-    if (!textInput.trim() && !file) {
-      setError("Please input a business description or upload a document/image context.");
-      return;
-    }
-
+  // ── SSE Stream consumer ──────────────────────────────────────────
+  const handleGenerate = useCallback(async () => {
+    if (!text.trim()) return;
     setIsGenerating(true);
-    setError(null);
+    setErrorMsg(null);
+    setSteps({});
+    setSessionId(null);
 
-    // Upload RAG files if any
-    let ragId = ragSessionId;
-    if (ragFiles.length > 0 && !ragSessionId) {
-      ragId = await uploadRagFiles();
-    }
-
-    const inputType = file ? (file.type.includes("pdf") ? "pdf" : "image") : "text";
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8500'}/api/generate`, {
+      const res = await fetch(`${API_BASE}/api/pipeline/stream`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           startup_name: startupName,
-          text_input: textInput,
+          text_input: text,
           input_type: inputType,
-          filename: file ? file.name : null,
-          file_content: base64File,
-          rag_session_id: ragId,
+          filename: fileName,
+          file_content: fileContent,
         }),
+        signal: controller.signal,
       });
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
       }
 
-      const result = await response.json();
-      if (result.session_id) {
-        router.push(`/results/${result.session_id}`);
-      } else {
-        throw new Error("Invalid response schema from backend.");
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE lines: "data: {...}\n\n"
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          try {
+            const event = JSON.parse(jsonStr);
+
+            switch (event.type) {
+              case "session":
+                setSessionId(event.session_id);
+                break;
+
+              case "step":
+                setSteps((prev) => ({
+                  ...prev,
+                  [event.step]: {
+                    status: event.status,
+                    detail: event.detail,
+                    data: event.data,
+                  },
+                }));
+                break;
+
+              case "done":
+                // Pipeline complete — redirect to results
+                router.push(`/results/${event.session_id}`);
+                return;
+
+              case "error":
+                setErrorMsg(event.message);
+                setSteps((prev) => {
+                  const next = { ...prev };
+                  // Mark the currently running step as error
+                  for (const [k, v] of Object.entries(next)) {
+                    if ((v as StepState).status === "running") {
+                      next[k] = { ...v, status: "error" } as StepState;
+                    }
+                  }
+                  return next;
+                });
+                break;
+            }
+          } catch {
+            // Ignore malformed JSON lines
+          }
+        }
       }
+
+      // If we exit the loop without a "done" event, check for error
+      setErrorMsg("Stream ended unexpectedly. Check your connection.");
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // User cancelled — do nothing
+      } else {
+        setErrorMsg(err instanceof Error ? err.message : "Something went wrong");
+      }
+    } finally {
       setIsGenerating(false);
-      const msg = err instanceof Error ? err.message : "Failed to establish endpoint connection to backend API.";
-      setError(msg);
+      abortRef.current = null;
     }
+  }, [text, startupName, inputType, fileName, fileContent, router]);
+
+  const handleCancel = () => {
+    abortRef.current?.abort();
+    setIsGenerating(false);
+  };
+
+  // ── Render step indicator ────────────────────────────────────────
+  const renderStep = (step: (typeof PIPELINE_STEPS)[number]) => {
+    const state = steps[step.key];
+    const status: StepStatus = state?.status || "pending";
+    const Icon = step.icon;
+
+    const styles: Record<StepStatus, string> = {
+      pending:  "border-white/10 bg-white/5 text-white/30",
+      running:  "border-blue-500/50 bg-blue-500/10 text-blue-400",
+      complete: "border-green-500/50 bg-green-500/10 text-green-400",
+      skipped:  "border-yellow-500/30 bg-yellow-500/5 text-yellow-500/50",
+      error:    "border-red-500/50 bg-red-500/10 text-red-400",
+    };
+
+    const statusLabel: Record<StepStatus, string> = {
+      pending:  "Waiting...",
+      running:  "In Progress",
+      complete: "Complete",
+      skipped:  "Skipped",
+      error:    "Failed",
+    };
+
+    return (
+      <div
+        key={step.key}
+        className={`flex items-center gap-3 rounded-xl border p-3 transition-all duration-500 ${styles[status]}`}
+      >
+        <div className="relative flex-shrink-0">
+          {status === "running" ? (
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: step.color }} />
+          ) : status === "complete" ? (
+            <CheckCircle2 className="h-5 w-5" style={{ color: "#34d399" }} />
+          ) : status === "error" ? (
+            <XCircle className="h-5 w-5" style={{ color: "#f87171" }} />
+          ) : (
+            <Icon className="h-5 w-5" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{step.label}</span>
+            <span className="text-xs opacity-60">{statusLabel[status]}</span>
+          </div>
+          {state?.detail && (
+            <p className="mt-0.5 text-xs opacity-70 truncate">{state.detail}</p>
+          )}
+          {state?.data && (
+            <div className="mt-1 flex gap-2 text-xs opacity-60">
+              {Object.entries(state.data).map(([k, v]) => (
+                <span key={k}>
+                  {k}: {String(v)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-accent/30 selection:text-accent relative overflow-hidden">
-      <AnimatedBackground />
-      {/* Background decoration grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#f5a62304_1px,transparent_1px),linear-gradient(to_bottom,#f5a62304_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-40"></div>
-      {/* Subtle organic light spots */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full bg-[#0c0802] blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[60%] rounded-full bg-[#0c0802] blur-[120px] pointer-events-none"></div>
-      
-      {/* Top Header */}
-      <header className="border-b border-darkBorder bg-card sticky top-0 z-50 shadow-[0_2px_15px_rgba(0,0,0,0.4)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-none bg-accent flex items-center justify-center border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]">
-              <Sparkles className="w-4.5 h-4.5 text-accent-foreground font-extrabold" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-[#f5a623] bg-clip-text text-transparent">
-                {translations[lang].title}
-              </h1>
-              <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest block -mt-1">
-                {translations[lang].subtitle}
-              </span>
-            </div>
+    <div className="min-h-screen bg-[#050505] text-white">
+      {/* Header */}
+      <div className="border-b border-white/10 px-6 py-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+              Generate BRD
+            </h1>
+            <p className="text-sm text-white/50 mt-0.5">
+              Llama 3.3 (Groq) Powered Multi-Agent Intelligence
+            </p>
           </div>
-
-                    <div className="flex items-center gap-4">
-            <Link
-              href="/validate"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-none bg-[#050505] border border-darkBorder hover:border-accent/40 transition-colors"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-accent" />
-              <span className="text-[10px] font-mono text-neutral-300 uppercase tracking-wider">Validate Idea</span>
-            </Link>
-
-            <Link
-              href="/history"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-none bg-[#050505] border border-darkBorder hover:border-accent/40 transition-colors"
-            >
-              <Clock className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-[10px] font-mono text-neutral-300 uppercase tracking-wider">History</span>
-            </Link>
-
-            {/* Language Selector Dropdown */}
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-none bg-[#050505] border border-darkBorder">
-              <Globe className="w-3.5 h-3.5 text-zinc-400" />
-              <select
-                value={lang}
-                onChange={(e) => changeLanguage(e.target.value as Language)}
-                className="bg-transparent text-[10px] font-mono text-neutral-300 uppercase tracking-wider focus:outline-none cursor-pointer pr-1"
-              >
-                <option value="en" className="bg-[#050505] text-white">English (EN)</option>
-                <option value="hi" className="bg-[#050505] text-white">हिन्दी (HI)</option>
-                <option value="es" className="bg-[#050505] text-white">Español (ES)</option>
-              </select>
-            </div>
-
-            {/* Backend Connection Indicator */}
-            <span className={`w-2 h-2 rounded-none ${
-                backendStatus === "online" 
-                  ? "bg-accent animate-pulse" 
-                  : "bg-red-500"
-              }`}></span>
-              <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
-                {backendStatus === "online" 
-                  ? translations[lang].apiOnline 
-                  : translations[lang].apiOffline}
-              </span>
-            </div>
-          
+          <a
+            href="/history"
+            className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white/80 transition-colors"
+          >
+            <Clock className="h-4 w-4" />
+            History
+          </a>
         </div>
-      </header>
+      </div>
 
-      {/* Main Container */}
-      <main className="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col justify-center relative z-10">
-        
-        {/* Intro Hero */}
-        <div className="text-center mb-10 select-none animate-float">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-none bg-[#0c0802] border border-accent/20 text-accent text-xs font-medium mb-4">
-            <Terminal className="w-3.5 h-3.5" />
-            <span>Llama 3.3 (Groq) Powered Multi-Agent Intelligence</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-b from-white to-neutral-300 bg-clip-text text-transparent mb-3">
-            {translations[lang].heroTitle}
-          </h2>
-          <p className="text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
-            {translations[lang].heroDesc}
-          </p>
-        </div>
-
-        {/* Input Panel Card */}
-        <div className="bg-[#050505] border border-darkBorder rounded-none overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
-          <div className="p-6 border-b border-darkBorder bg-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                {translations[lang].inputHeader}
-              </h3>
-              <p className="text-xs text-neutral-500">{translations[lang].inputSub}</p>
-            </div>
-            
-            <button
-              type="button"
-              onClick={loadDemo}
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+        {/* Input Section */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-1.5">
+              Startup Name (optional)
+            </label>
+            <input
+              type="text"
+              value={startupName}
+              onChange={(e) => setStartupName(e.target.value)}
+              placeholder="e.g. PawWalk"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition-colors"
               disabled={isGenerating}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-none text-xs font-mono font-bold tracking-tight btn-3d-secondary uppercase cursor-pointer"
-            >
-              <RotateCcw className="w-3 h-3 text-accent" />
-              {translations[lang].loadDemo}
-            </button>
+            />
           </div>
 
-          <form onSubmit={handleGenerate} className="p-6 flex flex-col gap-5">
-            {/* Startup/Product Name Field */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="startup-name" className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest">
-                {translations[lang].fieldStartup}
-              </label>
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-1.5">
+              Describe Your Startup Idea
+            </label>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="A platform that connects pet owners with local dog walkers..."
+              rows={5}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition-colors resize-none"
+              disabled={isGenerating}
+            />
+          </div>
+
+          {/* File Upload */}
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-1.5">
+              Upload Image or PDF (optional)
+            </label>
+            <label className="flex items-center gap-2 rounded-lg border border-dashed border-white/20 bg-white/5 px-4 py-3 text-sm text-white/40 cursor-pointer hover:border-white/40 transition-colors">
+              <Upload className="h-4 w-4" />
+              {fileName || "Choose a file..."}
               <input
-                id="startup-name"
-                type="text"
-                value={startupName}
-                onChange={(e) => setStartupName(e.target.value)}
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleFile}
+                className="hidden"
                 disabled={isGenerating}
-                placeholder={translations[lang].placeholderStartup}
-                className="w-full bg-[#0a0a0a] border border-darkBorder rounded-none px-4 py-2.5 font-sans text-sm text-white focus:outline-none focus:border-accent transition-all duration-200 placeholder:text-neutral-600 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.8),0_0_10px_rgba(245,166,35,0.05)]"
               />
-            </div>
-
-            {/* Description Textarea */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center">
-                <label htmlFor="text-input" className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest">
-                  {translations[lang].fieldDesc}
-                </label>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono text-neutral-500">
-                    {textInput.length} characters
-                  </span>
-                </div>
-              </div>
-
-
-              <textarea
-                id="text-input"
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
+            </label>
+            {fileName && (
+              <button
+                onClick={() => { setFileName(null); setFileContent(null); setInputType("text"); }}
+                className="mt-1 text-xs text-red-400 hover:text-red-300"
                 disabled={isGenerating}
-                placeholder={translations[lang].placeholderDesc}
-                className="w-full bg-[#0a0a0a] border border-darkBorder rounded-none px-4 py-3 font-sans text-sm text-white focus:outline-none focus:border-accent transition-all duration-200 placeholder:text-neutral-600 min-h-[140px] resize-none leading-relaxed shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.8),0_0_10px_rgba(245,166,35,0.05)]"
-              />
-            </div>
-
-            {/* File Upload Zone */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest">
-                {translations[lang].fieldUpload}
-              </label>
-
-              {!file ? (
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border border-dashed rounded-none p-6 text-center cursor-pointer transition-all duration-200 bg-[#030303] shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)] ${
-                    isDragOver 
-                      ? "border-accent bg-[#181003]" 
-                      : "border-darkBorder hover:border-accent/60 hover:bg-card"
-                  }`}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf,image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <Upload className="w-8 h-8 text-neutral-500 mx-auto mb-2.5" />
-                  <p className="text-xs font-semibold text-neutral-200">
-                    {translations[lang].dragDrop}
-                  </p>
-                  <p className="text-[10px] text-neutral-500 mt-1 font-mono">
-                    {translations[lang].dragDropSub}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between p-3.5 bg-background border border-darkBorder rounded-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-none bg-card border border-darkBorder flex items-center justify-center text-accent">
-                      {file.type === "application/pdf" ? (
-                        <FileText className="w-5 h-5 text-accent" />
-                      ) : (
-                        <ImageIcon className="w-5 h-5 text-accent" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-neutral-200 max-w-sm truncate">{file.name}</p>
-                      <p className="text-[10px] text-neutral-400 font-mono">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type.split("/")[1].toUpperCase()}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRemoveFile}
-                    disabled={isGenerating}
-                    className="p-1.5 rounded-none border border-darkBorder bg-background text-neutral-400 hover:text-red-400 hover:bg-red-950/20 hover:border-red-900/50 shadow-sm transition-all cursor-pointer active:scale-95"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* RAG Reference Documents */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-1.5">
-                <FileStack className="w-3.5 h-3.5" />
-                Reference Documents (optional)
-              </label>
-              <p className="text-[10px] text-neutral-500 font-mono -mt-1">Upload PDFs or text files for context-aware BRD generation</p>
-
-              {ragFiles.length === 0 ? (
-                <div
-                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                  onDrop={handleRagDrop}
-                  onClick={() => ragInputRef.current?.click()}
-                  className="border border-dashed border-darkBorder rounded-none p-4 text-center cursor-pointer transition-all duration-200 bg-[#030303] hover:border-accent/40 hover:bg-card"
-                >
-                  <input
-                    ref={ragInputRef}
-                    type="file"
-                    accept=".pdf,.txt,.md"
-                    multiple
-                    onChange={(e) => handleRagFileAdd(e.target.files)}
-                    className="hidden"
-                  />
-                  <p className="text-[11px] text-neutral-400">Drop PDFs / TXT files here or click to browse</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {ragFiles.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between p-2.5 bg-background border border-darkBorder rounded-none">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <FileText className="w-4 h-4 text-accent shrink-0" />
-                        <span className="text-xs text-neutral-300 truncate">{f.name}</span>
-                        <span className="text-[10px] text-neutral-500 font-mono shrink-0">{(f.size / 1024).toFixed(0)}KB</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRagRemove(i)}
-                        disabled={isGenerating}
-                        className="p-1 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => ragInputRef.current?.click()}
-                    disabled={isGenerating}
-                    className="text-[10px] text-accent/70 hover:text-accent font-mono cursor-pointer"
-                  >
-                    + Add more files
-                  </button>
-                </div>
-              )}
-              {ragUploading && (
-                <p className="text-[10px] text-yellow-400 font-mono animate-pulse">Uploading reference documents...</p>
-              )}
-              {ragSessionId && ragFiles.length > 0 && (
-                <p className="text-[10px] text-green-400/70 font-mono">Context ready ({ragFiles.length} file{ragFiles.length > 1 ? "s" : ""})</p>
-              )}
-            </div>
-
-            {/* Error Message Panel */}
-            {error && (
-              <div className="flex gap-2.5 items-start p-3 bg-red-950/20 border border-red-900/40 rounded-none text-red-300 text-xs">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <span className="leading-normal font-mono">{error}</span>
-              </div>
+              >
+                Remove file
+              </button>
             )}
+          </div>
 
-            {/* Generate Action Button */}
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="w-full btn-3d py-3.5 px-4 rounded-none text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-b-0 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-neutral-400 border-t-white rounded-full animate-spin"></div>
-                  <span>{translations[lang].btnGenerating}</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 fill-current" />
-                  <span>{translations[lang].btnGenerate}</span>
-                </>
+          {/* Generate Button */}
+          <div className="flex gap-3">
+            {!isGenerating ? (
+              <button
+                onClick={handleGenerate}
+                disabled={!text.trim()}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate BRD
+              </button>
+            ) : (
+              <button
+                onClick={handleCancel}
+                className="flex items-center gap-2 rounded-xl border border-red-500/50 bg-red-500/10 px-6 py-2.5 text-sm font-semibold text-red-400 hover:bg-red-500/20 transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {errorMsg && (
+          <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Generation Failed</p>
+              <p className="mt-1 text-xs opacity-80">{errorMsg}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Pipeline Progress */}
+        {isGenerating && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-white/70">
+                Pipeline Progress
+              </h2>
+              {sessionId && (
+                <span className="text-xs text-white/30 font-mono">
+                  {sessionId.slice(0, 8)}...
+                </span>
               )}
-            </button>
-          </form>
-        </div>
-      </main>
+            </div>
+            {PIPELINE_STEPS.map(renderStep)}
+          </div>
+        )}
 
-      {/* Footer */}
-      <footer className="border-t border-darkBorder bg-card py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 text-center font-mono text-[10px] text-neutral-500 uppercase tracking-wider">
-          {translations[lang].footer}
+        {/* Validate Idea Link */}
+        <div className="text-center">
+          <a
+            href="/validate"
+            className="text-sm text-white/40 hover:text-white/60 transition-colors"
+          >
+            Just want to validate an idea? → Idea Validator
+          </a>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

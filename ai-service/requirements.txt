@@ -50,3 +50,12 @@ chromadb>=1.5.0
 pypdf>=3.0.0
 python-multipart>=0.0.9
 psycopg2-binary>=2.9.0
+fastapi==0.138.0
+uvicorn==0.49.0
+groq==1.5.0
+pydantic==2.13.4
+python-dotenv==1.2.2
+wordninja==2.0.0
+pyenchant==3.3.0
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
