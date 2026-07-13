@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.utils.logging_config import setup_logging, get_logger
 from app.routers import extraction, brd, critic, multimodal, pipeline, export, rag
-from app.routers import validation  # ← NEW
+from app.routers import validation, sessions
 from app.database import init_db      # ← NEW
 
 
