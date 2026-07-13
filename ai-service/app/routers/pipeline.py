@@ -1,8 +1,8 @@
 ""
-Vellum Pipeline — SSE Streaming Endpoints
+Vellum Pipeline -- SSE Streaming Endpoints
 
 WHAT THIS FILE DOES:
-- POST /api/pipeline/stream — The MAIN endpoint. Runs the full BRD pipeline
+- POST /api/pipeline/stream -- The MAIN endpoint. Runs the full BRD pipeline
   and emits Server-Sent Events (SSE) as each agent completes.
   Frontend gets live progress instead of waiting 30+ seconds for one response.
 
@@ -13,7 +13,7 @@ HOW SSE WORKS:
 4. Frontend reads the stream and updates UI in real-time.
 
 WHY ASYNC GENERATOR + run_in_executor:
-- The current agents (extraction_agent, brd_agent, etc.) are synchronous —
+- The current agents (extraction_agent, brd_agent, etc.) are synchronous --
   they call Groq via blocking HTTP.
 - FastAPI's StreamingResponse needs an async generator.
 - asyncio.to_thread() runs the sync agent in a thread pool so the event loop
@@ -121,7 +121,7 @@ async def stream_generate(request: Request):
     Run the full BRD pipeline and emit SSE events as each step completes.
 
     SSE event types the frontend should handle:
-      { "type": "session", "session_id": "..." }       — first event, gives the ID
+      { "type": "session", "session_id": "..." }       -- first event, gives the ID
       { "type": "step", "step": "input", "status": "complete" }
       { "type": "step", "step": "extraction", "status": "complete", "data": {...} }
       { "type": "step", "step": "validation", "status": "complete", "data": {...} }
@@ -266,7 +266,7 @@ async def stream_generate(request: Request):
                 },
                 {
                     "step": "4", "agent": "QualityAgent",
-                    "output_summary": f"BRD quality review: {review.get('overall_score', 'N/A')}/10 — {review.get('overall_verdict', 'N/A')}.",
+                    "output_summary": f"BRD quality review: {review.get('overall_score', 'N/A')}/10 -- {review.get('overall_verdict', 'N/A')}.",
                     "tokens_used": 0,
                 },
             ]
@@ -357,7 +357,7 @@ async def stream_generate(request: Request):
 
 @router.post("/generate")
 def generate(request: GenerateRequest):
-    """Original synchronous generate — kept as fallback."""
+    """Original synchronous generate -- kept as fallback."""
     start = time.time()
     session_id = str(uuid.uuid4())
     logger.info("Pipeline start | session=%s | type=%s", session_id, request.input_type)
