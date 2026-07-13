@@ -1,15 +1,23 @@
 """Session history endpoints — read from Supabase PostgreSQL."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.database import get_db
 from app.models.db_models import BRDSession
+from app.config import settings
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 
+def verify_access(x_vellum_key: str = Header(default=None)):
+    """Simple API key check. Frontend sends X-Vellum-Key header."""
+    if not x_vellum_key or x_vellum_key != settings.sessions_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+
 @router.get("")
-def list_sessions(limit: int = 20, db: Session = Depends(get_db)):
+def list_sessions(limit: int = 20, db: Session = Depends(get_db), _: None = Depends(verify_access)):
     """Return recent BRD sessions, newest first."""
     rows = (
         db.query(BRDSession)
@@ -31,7 +39,7 @@ def list_sessions(limit: int = 20, db: Session = Depends(get_db)):
 
 
 @router.get("/{session_id}")
-def get_session(session_id: str, db: Session = Depends(get_db)):
+def get_session(session_id: str, db: Session = Depends(get_db), _: None = Depends(verify_access)):
     """Fetch a single session by ID."""
     row = db.query(BRDSession).filter(BRDSession.id == session_id).first()
     if not row:

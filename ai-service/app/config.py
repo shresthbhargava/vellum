@@ -19,6 +19,7 @@ class Settings:
     llm_retry_base_delay: float = float(os.getenv("LLM_RETRY_BASE_DELAY", "1.0"))
     max_image_size_bytes: int = int(os.getenv("MAX_IMAGE_SIZE_BYTES", str(5 * 1024 * 1024)))
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///vellum.db")
+    sessions_api_key: str = os.getenv("SESSIONS_API_KEY", "vellum-2024-secure-key")
 
     def validate(self) -> list[str]:
         problems = []

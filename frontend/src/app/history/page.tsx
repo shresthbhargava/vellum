@@ -20,7 +20,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/sessions?limit=50`)
+    fetch(`${API}/api/sessions?limit=50`, { headers: { "X-Vellum-Key": "vellum-2024-secure-key" } })
       .then((r) => r.json())
       .then((data) => {
         setSessions(Array.isArray(data) ? data : []);
