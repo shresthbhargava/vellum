@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.services import extraction_agent, brd_agent, critic_agent, multimodal_parser
+from app.services import competitive_agent
 from app.utils.logging_config import get_logger
 from app.database import SessionLocal
 from app.models.db_models import BRDSession
@@ -130,9 +131,9 @@ async def stream_generate(request: Request):
             validation_result = None
             yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Enriching with industry context and competitive landscape..."})
             try:
-                from app.services import validation_agent
+                from app.services import validation_agent as va
                 validation_result = await asyncio.to_thread(
-                    validation_agent.validate_idea,
+                    va.validate_idea,
                     idea=raw_idea,
                     industry=extracted_dict.get("domain"),
                 )
@@ -141,6 +142,21 @@ async def stream_generate(request: Request):
                 yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Skipping enrichment - module not available"})
             except Exception as e:
                 yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": f"Enrichment skipped: {str(e)[:60]}"})
+
+            # Step 3.5: Competitive Intelligence
+            competitive_data = None
+            yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Analyzing competitive landscape..."})
+            try:
+                competitive_data = await asyncio.to_thread(
+                    competitive_agent.analyze_competition,
+                    req.startup_name or extracted_dict.get("business_name", ""),
+                    extracted_dict.get("domain", ""),
+                    raw_idea,
+                )
+                comp_count = len(competitive_data.get("competitors", []))
+                yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": f"Found {comp_count} competitors in {extracted_dict.get('domain', '')} space"})
+            except Exception as e:
+                logger.warning("Competitive agent failed: %s", e)
 
             # Step 4: BRD Generation
             yield sse_event({"type": "status", "step": 4, "agent": "BRDAgent", "message": "Generating Business Requirements Document..."})
@@ -163,10 +179,12 @@ async def stream_generate(request: Request):
             yield sse_event({"type": "status", "step": 5, "agent": "QualityAgent", "message": f"Quality score: {review.get('overall_score', 'N/A')}/10"})
 
             # Build session data
+            comp_competitors = competitive_data.get("competitors", []) if competitive_data else brd_dict.get("competitors", [])
+
             traces = [
                 {"step": "1", "agent": "InputAgent", "output_summary": f"Validated input for {req.startup_name or 'submitted idea'}. {req.input_type} modality, {len(raw_idea)} chars.", "tokens_used": 0},
                 {"step": "2", "agent": "ExtractionAgent", "output_summary": f"Extracted data for {extracted.business_name} in {extracted.domain} domain. Confidence: {extracted_dict.get('confidence', 'N/A')}.", "tokens_used": 0},
-                {"step": "3", "agent": "EnrichmentAgent", "output_summary": "Enriched with industry context and validation.", "tokens_used": 0},
+                {"step": "3", "agent": "EnrichmentAgent", "output_summary": f"Analyzed {len(comp_competitors)} competitors in {extracted.domain} space. Market maturity: {competitive_data.get('market_maturity', 'N/A') if competitive_data else 'N/A'}.", "tokens_used": 0},
                 {"step": "4", "agent": "BRDAgent", "output_summary": f"Generated BRD with {feature_count} features and {story_count} user stories.", "tokens_used": 0},
                 {"step": "5", "agent": "QualityAgent", "output_summary": f"Quality score: {review.get('overall_score', 'N/A')}/10 - {review.get('overall_verdict', 'N/A')}.", "tokens_used": 0},
             ]
@@ -195,11 +213,12 @@ async def stream_generate(request: Request):
                     "technical_architecture": brd_dict.get("technical_architecture", {}),
                     "success_metrics": brd_dict.get("success_metrics", []),
                     "overall_confidence": extracted_dict.get("confidence", 0),
-                    "competitors": brd_dict.get("competitors", []),
+                    "competitors": comp_competitors,
                     "swot": brd_dict.get("swot", {}),
                     "risks": brd_dict.get("risks", []),
                     "timeline": brd_dict.get("timeline", []),
                 },
+                "competitive_intelligence": competitive_data,
                 "critic": review,
                 "validation": validation_result,
                 "extraction": extracted_dict,
@@ -216,6 +235,7 @@ async def stream_generate(request: Request):
                 "domain": extracted.domain,
                 "raw_input": req.text_input,
                 "extracted_data": extracted_dict,
+                "enriched_data": competitive_data,
                 "brd_data": brd_dict,
                 "validation_data": validation_result,
                 "quality_review": review,
@@ -223,7 +243,7 @@ async def stream_generate(request: Request):
                 "processing_time_ms": elapsed,
             })
 
-            # Send complete event with session_id
+            # Send complete event
             yield sse_event({
                 "type": "complete",
                 "step": 5,
@@ -277,12 +297,22 @@ def generate(request: GenerateRequest):
 
         validation_result = None
         try:
-            from app.services import validation_agent
-            validation_result = validation_agent.validate_idea(
+            from app.services import validation_agent as va
+            validation_result = va.validate_idea(
                 idea=raw_idea, industry=extracted_dict.get("domain"),
             )
         except (ImportError, Exception) as e:
             logger.warning("Validation skipped: %s", e)
+
+        competitive_data = None
+        try:
+            competitive_data = competitive_agent.analyze_competition(
+                request.startup_name or extracted_dict.get("business_name", ""),
+                extracted_dict.get("domain", ""),
+                raw_idea,
+            )
+        except Exception as e:
+            logger.warning("Competitive agent failed: %s", e)
 
         brd_dict = brd_agent.generate_brd_draft(extracted_dict)
 
@@ -292,10 +322,12 @@ def generate(request: GenerateRequest):
             logger.warning("Critic failed: %s", e)
             review = {"overall_score": 0, "overall_verdict": "unavailable", "sections": {}}
 
+        comp_competitors = competitive_data.get("competitors", []) if competitive_data else brd_dict.get("competitors", [])
+
         traces = [
             {"step": "1", "agent": "InputAgent", "output_summary": f"Validated input for {request.startup_name or 'idea'}.", "tokens_used": 0},
             {"step": "2", "agent": "ExtractionAgent", "output_summary": f"Extracted data for {extracted.business_name}.", "tokens_used": 0},
-            {"step": "3", "agent": "EnrichmentAgent", "output_summary": "Enriched with context.", "tokens_used": 0},
+            {"step": "3", "agent": "EnrichmentAgent", "output_summary": f"Analyzed {len(comp_competitors)} competitors.", "tokens_used": 0},
             {"step": "4", "agent": "BRDAgent", "output_summary": f"Generated BRD with {len(brd_dict.get('feature_list', []))} features.", "tokens_used": 0},
             {"step": "5", "agent": "QualityAgent", "output_summary": f"Score: {review.get('overall_score', 'N/A')}/10.", "tokens_used": 0},
         ]
@@ -322,11 +354,12 @@ def generate(request: GenerateRequest):
                 "technical_architecture": brd_dict.get("technical_architecture", {}),
                 "success_metrics": brd_dict.get("success_metrics", []),
                 "overall_confidence": extracted_dict.get("confidence", 0),
-                "competitors": brd_dict.get("competitors", []),
+                "competitors": comp_competitors,
                 "swot": brd_dict.get("swot", {}),
                 "risks": brd_dict.get("risks", []),
                 "timeline": brd_dict.get("timeline", []),
             },
+            "competitive_intelligence": competitive_data,
             "critic": review, "validation": validation_result,
             "extraction": extracted_dict, "processing_time_ms": elapsed,
             "gcs_uri": None, "error": None,
@@ -335,9 +368,10 @@ def generate(request: GenerateRequest):
         save_session_to_db(session_id, {
             "startup_name": request.startup_name or extracted.business_name,
             "domain": extracted.domain, "raw_input": request.text_input,
-            "extracted_data": extracted_dict, "brd_data": brd_dict,
-            "validation_data": validation_result, "quality_review": review,
-            "traces": traces, "processing_time_ms": elapsed,
+            "extracted_data": extracted_dict, "enriched_data": competitive_data,
+            "brd_data": brd_dict, "validation_data": validation_result,
+            "quality_review": review, "traces": traces,
+            "processing_time_ms": elapsed,
         })
         return {"session_id": session_id, "status": "processing"}
 
