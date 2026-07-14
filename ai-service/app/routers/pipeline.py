@@ -213,7 +213,7 @@ async def stream_generate(request: Request):
                     "technical_architecture": brd_dict.get("technical_architecture", {}),
                     "success_metrics": brd_dict.get("success_metrics", []),
                     "overall_confidence": extracted_dict.get("confidence", 0),
-                    "competitors": comp_competitors,
+                    "competitors": brd_dict.get("competitors", []),
                     "swot": brd_dict.get("swot", {}),
                     "risks": brd_dict.get("risks", []),
                     "timeline": brd_dict.get("timeline", []),
