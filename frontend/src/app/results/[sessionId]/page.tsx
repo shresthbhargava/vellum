@@ -90,6 +90,24 @@ interface SessionState {
   vellum_score?: number;
   validation?: { overall_score?: number };
   critic?: { overall_score?: number };
+  competitive_intelligence?: {
+  market_overview?: string;
+  competitors?: Array<{
+    name: string;
+    type: string;
+    description?: string;
+    strengths?: string[];
+    weaknesses?: string[];
+    market_position?: string;
+    pricing_model?: string;
+    threat_level?: string;
+  }>;
+  market_gaps?: string[];
+  competitive_advantage_opportunities?: string[];
+  market_maturity?: string;
+  entry_barriers?: string[];
+  recommended_positioning?: string;
+} | null;
 }
 
 const TypeWriter = ({ text, speed = 8, onDone }: { text: string, speed?: number, onDone?: () => void }) => {
@@ -1641,6 +1659,93 @@ const renderAgentTraceFeed = () => (
       )}
     </motion.div>
   );
+  const renderCompetitiveIntel = () => {
+  const ci = data?.competitive_intelligence;
+  if (!ci) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 14 * 0.1 }}
+      className="card-3d glass-card rounded-xl p-5 glow-accent h-full"
+    >
+      <div className="flex justify-between items-center mb-3 border-b border-darkBorder pb-2">
+        <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-neutral-400 mb-0">
+          COMPETITIVE INTELLIGENCE
+        </h3>
+        <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold tracking-tight ${
+          ci.market_maturity === "emerging" ? "bg-emerald-500/10 text-emerald-400"
+          : ci.market_maturity === "growing" ? "bg-blue-500/10 text-blue-400"
+          : ci.market_maturity === "mature" ? "bg-amber-500/10 text-amber-400"
+          : "bg-red-500/10 text-red-400"
+        }`}>
+          {ci.market_maturity} market
+        </span>
+      </div>
+
+      {/* Market Overview */}
+      {ci.market_overview && (
+        <div className="mb-4">
+          <p className="text-xs font-mono text-neutral-500 uppercase tracking-wider mb-1">Market Overview</p>
+          <p className="text-[11px] text-neutral-300 font-sans leading-relaxed">{ci.market_overview}</p>
+        </div>
+      )}
+
+      {/* Recommended Positioning */}
+      {ci.recommended_positioning && (
+        <div className="mb-4 p-2.5 rounded-lg bg-accent/5 border border-accent/20">
+          <p className="text-xs font-mono text-accent uppercase tracking-wider mb-1">Recommended Positioning</p>
+          <p className="text-[11px] text-neutral-200 font-sans leading-relaxed">{ci.recommended_positioning}</p>
+        </div>
+      )}
+
+      {/* Market Gaps */}
+      {ci.market_gaps && ci.market_gaps.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-mono text-neutral-500 uppercase tracking-wider mb-1.5">Market Gaps</p>
+          <div className="space-y-1">
+            {ci.market_gaps.map((gap: string, i: number) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-emerald-400 mt-0.5 flex-shrink-0">&#9656;</span>
+                <p className="text-[11px] text-neutral-300 font-sans">{gap}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Entry Barriers */}
+      {ci.entry_barriers && ci.entry_barriers.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-mono text-neutral-500 uppercase tracking-wider mb-1.5">Entry Barriers</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ci.entry_barriers.map((barrier: string, i: number) => (
+              <span key={i} className="px-2 py-0.5 rounded bg-slate-900 border border-darkBorder text-[10px] text-neutral-400 font-sans">
+                {barrier}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Competitive Advantage Opportunities */}
+      {ci.competitive_advantage_opportunities && ci.competitive_advantage_opportunities.length > 0 && (
+        <div>
+          <p className="text-xs font-mono text-neutral-500 uppercase tracking-wider mb-1.5">Advantage Opportunities</p>
+          <div className="space-y-1">
+            {ci.competitive_advantage_opportunities.map((opp: string, i: number) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-accent mt-0.5 flex-shrink-0">&#9656;</span>
+                <p className="text-[11px] text-neutral-300 font-sans">{opp}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
   const renderCitationHighlights = () => (
     <motion.div
@@ -1977,6 +2082,7 @@ const renderAgentTraceFeed = () => (
               </div>
               <div className="col-span-1 lg:col-span-6">
                 {renderCompetitorTable()}
+                {renderCompetitiveIntel()}
               </div>
             </div>
 
