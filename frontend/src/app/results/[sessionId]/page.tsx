@@ -1574,7 +1574,7 @@ const renderAgentTraceFeed = () => (
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 13 * 0.1 }}
-      className="card-3d glass-card rounded-xl p-5 glow-accent h-full"
+      className="card-3d glass-card rounded-xl p-5 glow-accent"
     >
       <div className="flex justify-between items-center mb-3 border-b border-darkBorder pb-2">
         <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-neutral-400 mb-0">
@@ -1669,7 +1669,7 @@ const renderAgentTraceFeed = () => (
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 14 * 0.1 }}
-      className="card-3d glass-card rounded-xl p-5 glow-accent h-full"
+      className="card-3d glass-card rounded-xl p-5 glow-accent"
     >
       <div className="flex justify-between items-center mb-3 border-b border-darkBorder pb-2">
         <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-neutral-400 mb-0">
@@ -2081,7 +2081,7 @@ const renderAgentTraceFeed = () => (
               <div className="col-span-1 lg:col-span-6">
                 {renderSWOTGrid()}
               </div>
-              <div className="col-span-1 lg:col-span-6">
+              <div className="col-span-1 lg:col-span-6 flex flex-col gap-6">
                 {renderCompetitorTable()}
                 {renderCompetitiveIntel()}
               </div>

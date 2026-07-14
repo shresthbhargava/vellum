@@ -302,10 +302,20 @@ export default function GeneratePage() {
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-12">
         {/* Vellum Branding Header */}
-        <div className="flex items-center mb-12">
-          <Link href="/" className="text-2xl font-bold font-mono tracking-widest text-white hover:text-zinc-300 transition-colors">
-            vellum<span className="text-blue-500">.</span>
+        <div className="flex items-center justify-between mb-12">
+          <Link href="/" className="text-xl font-bold font-mono tracking-widest flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <span className="text-white">Vellum</span>
+            <span className="text-amber-500">/</span>
+            <span className="text-white">POWERED BY GROQ</span>
           </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/generate" className="text-sm font-mono text-white border-b-2 border-accent pb-0.5 transition-colors">
+              GENERATE
+            </Link>
+            <Link href="/validate" className="text-sm font-mono text-zinc-400 hover:text-white transition-colors">
+              VALIDATE
+            </Link>
+          </div>
         </div>
 
         {/* Header */}
