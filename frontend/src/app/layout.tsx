@@ -1,7 +1,7 @@
-import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Space_Mono } from "next/font/google";
-import "./globals.css";
+import { ClerkProvider } from '@clerk/nextjs'
+import './globals.css'
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,26 +29,14 @@ export const metadata: Metadata = {
     "Enterprise multi-agent Business Requirement Document (BRD) generation tool powered by Llama 3.3 (Groq).",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`
-        ${spaceGrotesk.variable}
-        ${spaceMono.variable}
-        ${inter.variable}
-        dark selection:bg-accent/30 selection:text-accent
-      `}
-    >
-      <body className="font-grotesk bg-background text-foreground min-h-screen antialiased">
-        <ClerkProvider>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={`${inter.variable} ${spaceGrotesk.variable} ${spaceMono.variable} antialiased`}>
           {children}
-        </ClerkProvider>
-      </body>
-    </html>
-  );
+        </body>
+      </html>
+    </ClerkProvider>
+  )
 }
