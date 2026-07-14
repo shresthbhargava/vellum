@@ -2,7 +2,7 @@ import { getAuth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 export default async function middleware(req: Request) {
-  const { userId } = await getAuth(req as any)
+  const { userId } = await getAuth({ headers: req.headers })
 
   const publicPaths = ['/', '/sign-in', '/sign-up']
   const url = new URL(req.url)
