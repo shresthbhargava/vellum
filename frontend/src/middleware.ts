@@ -1,16 +1,17 @@
-import { getAuth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export default async function middleware(req: Request) {
-  const { userId } = await getAuth({ headers: req.headers })
+export default async function middleware(req: NextRequest) {
+  // Clerk session is in a cookie - check if it exists
+  const sessionToken = req.cookies.get('__client_session')
 
   const publicPaths = ['/', '/sign-in', '/sign-up']
-  const url = new URL(req.url)
-  const isPublic = publicPaths.some(p => url.pathname === p || url.pathname.startsWith(p + '/'))
+  const isPublic = publicPaths.some(p => req.nextUrl.pathname === p || req.nextUrl.pathname.startsWith(p + '/'))
 
-  if (!userId && !isPublic) {
-    const signInUrl = new URL('/sign-in', req.url)
-    signInUrl.searchParams.set('redirect_url', req.url)
+  if (!sessionToken && !isPublic) {
+    const signInUrl = req.nextUrl.clone()
+    signInUrl.pathname = '/sign-in'
+    signInUrl.searchParams.set('redirect_url', req.nextUrl.pathname)
     return NextResponse.redirect(signInUrl)
   }
 
