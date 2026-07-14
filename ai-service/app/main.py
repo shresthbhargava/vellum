@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.utils.logging_config import setup_logging, get_logger
-from app.routers import extraction, brd, critic, multimodal, pipeline, sessions
+from app.routers import extraction, brd, critic, multimodal, pipeline, sessions, validation
 from app.database import init_db
 
 # ── Step 1: Setup logging BEFORE anything else ───────────────────
@@ -52,6 +52,7 @@ app.include_router(extraction.router)
 app.include_router(brd.router)
 app.include_router(critic.router)
 app.include_router(multimodal.router)
+app.include_router(validation.router)
 
 
 # ── Step 6: Health check and root ───────────────────────────────
