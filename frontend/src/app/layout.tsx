@@ -1,3 +1,4 @@
+import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
@@ -44,7 +45,9 @@ export default function RootLayout({
       `}
     >
       <body className="font-grotesk bg-background text-foreground min-h-screen antialiased">
-        {children}
+        <ClerkProvider>
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   );
