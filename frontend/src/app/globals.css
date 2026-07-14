@@ -1,6 +1,6 @@
 /* Fonts loaded via next/font/google in layout.tsx (Inter, Space_Grotesk, Space_Mono) */
 @import "tailwindcss";
-@import "@clerk/themes/dist/clerk.css" layer(base);
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
