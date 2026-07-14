@@ -1260,57 +1260,58 @@ export default function ResultsPage() {
         </div>
         <div className="flex items-center gap-6 py-2 select-none">
           {/* Circular indicator */}
-          <div className="relative shrink-0 drop-shadow-[0_0_15px_rgba(245,166,35,0.2)]" style={{ width: '96px', height: '96px' }}>
-            <svg
-              width="96"
-              height="96"
-              viewBox="0 0 96 96"
-              style={{ transform: 'rotate(-90deg)' }}
-            >
-              {/* Track ring */}
-              <circle
-                cx="48" cy="48" r="42"
-                fill="none"
-                stroke="#1e293b"
-                strokeWidth="6"
-              />
-              {/* Progress ring */}
-              <circle
-                cx="48" cy="48" r="42"
-                fill="none"
-                stroke="url(#validity-gradient)"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 42}`}
-                strokeDashoffset={`${2 * Math.PI * 42 * (1 - confidenceScore)}`}
-                style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
-              />
-              <defs>
-                <linearGradient id="validity-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#f5a623" />
-                  <stop offset="100%" stopColor="#f97316" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                lineHeight: 1.1,
-                gap: '4px',
-              }}
-            >
-              <span style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                {(confidenceScore * 100).toFixed(0)}<span className="text-sm text-neutral-400">%</span>
-              </span>
-              <span style={{ fontSize: '9px', color: '#71717a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                Confidence
-              </span>
+          <div className="flex flex-col items-center gap-2 shrink-0">
+            <div className="relative drop-shadow-[0_0_15px_rgba(245,166,35,0.2)]" style={{ width: '80px', height: '80px' }}>
+              <svg
+                width="80"
+                height="80"
+                viewBox="0 0 80 80"
+                style={{ transform: 'rotate(-90deg)' }}
+              >
+                {/* Track ring */}
+                <circle
+                  cx="40" cy="40" r="34"
+                  fill="none"
+                  stroke="#1e293b"
+                  strokeWidth="6"
+                />
+                {/* Progress ring */}
+                <circle
+                  cx="40" cy="40" r="34"
+                  fill="none"
+                  stroke="url(#validity-gradient)"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 34}`}
+                  strokeDashoffset={`${2 * Math.PI * 34 * (1 - confidenceScore)}`}
+                  style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                />
+                <defs>
+                  <linearGradient id="validity-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#f5a623" />
+                    <stop offset="100%" stopColor="#f97316" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1.1,
+                }}
+              >
+                <span style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                  {(confidenceScore * 100).toFixed(0)}<span className="text-xs text-neutral-400">%</span>
+                </span>
+              </div>
             </div>
+            <span style={{ fontSize: '10px', color: '#71717a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Confidence
+            </span>
           </div>
           <div className="flex-grow flex flex-col gap-4">
             <div className="bg-white/5 p-2.5 rounded-lg border border-white/5">

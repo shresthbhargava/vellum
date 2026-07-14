@@ -145,6 +145,13 @@ export default function ValidatePage() {
     <div className="min-h-screen bg-[#09090b] text-white relative overflow-hidden">
       <AnimatedBackground />
       <div className="relative z-10 max-w-4xl mx-auto px-6 py-12">
+        {/* Vellum Branding Header */}
+        <div className="flex items-center mb-12">
+          <Link href="/" className="text-2xl font-bold font-mono tracking-widest text-white hover:text-zinc-300 transition-colors">
+            vellum<span className="text-blue-500">.</span>
+          </Link>
+        </div>
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
           <Link href="/generate" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-6 group">
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />

@@ -301,6 +301,13 @@ export default function GeneratePage() {
       <AnimatedBackground />
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-12">
+        {/* Vellum Branding Header */}
+        <div className="flex items-center mb-12">
+          <Link href="/" className="text-2xl font-bold font-mono tracking-widest text-white hover:text-zinc-300 transition-colors">
+            vellum<span className="text-blue-500">.</span>
+          </Link>
+        </div>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
