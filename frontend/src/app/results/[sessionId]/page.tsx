@@ -1355,27 +1355,47 @@ const renderAgentTraceFeed = () => (
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
-          {agentsList.map((ag) => {
-            let trace = traces.find((t) => t.agent === ag.name);
-            let isDone = traces.some((t) => t.agent === ag.name && t.output_summary.length > 50);
-
-            if (ag.name === "BRDAgent") {
-              trace = { step: "4", agent: "BRDAgent", output_summary: "Generated BRD with 5 features and 2 user stories." };
-              isDone = true;
-            }
-            if (ag.name === "QualityAgent") {
-              trace = { step: "5", agent: "QualityAgent", output_summary: "Quality score: 8.2/10 - strong." };
-              isDone = true;
-            }
-
+                    {agentsList.map((ag) => {
+            const trace = traces.find((t) => t.agent === ag.name);
+            const isDone = !!trace && trace.output_summary && trace.output_summary.length > 10;
             const isCurrent = isGenerating && traces.length + 1 === parseInt(ag.key);
+            const isExpanded = expandedTrace === ag.name;
+
+            const getSnapshot = () => {
+              if (ag.name === "ExtractionAgent" && data?.extraction) {
+                const ext = data.extraction;
+                return `Domain: ${ext.domain}\nBusiness: ${ext.business_name}\nTarget Users: ${ext.target_users || "N/A"}\nConfidence: ${ext.confidence || "N/A"}`;
+              }
+              if (ag.name === "EnrichmentAgent" && data?.competitive_intelligence) {
+                const ci = data.competitive_intelligence;
+                return `Market Maturity: ${ci.market_maturity || "N/A"}\nCompetitors Found: ${ci.competitors?.length || 0}\nMarket Gaps: ${ci.market_gaps?.length || 0}\nEntry Barriers: ${ci.entry_barriers?.length || 0}`;
+              }
+              if (ag.name === "BRDAgent" && data?.brd) {
+                const b = data.brd;
+                return `Features: ${b.functional_requirements?.length || 0}\nUser Stories: ${b.user_stories?.length || 0}\nNFRs: ${b.non_functional_requirements?.length || 0}\nRisks: ${b.risks?.length || 0}`;
+              }
+              if (ag.name === "QualityAgent" && data?.critic) {
+                const c = data.critic;
+                const sections = c.sections ? Object.keys(c.sections).join(", ") : "N/A";
+                return `Score: ${c.overall_score || "N/A"}/10\nVerdict: ${c.overall_verdict || "N/A"}\nSections Reviewed: ${sections}`;
+              }
+              if (ag.name === "InputAgent" && data?.extraction) {
+                return `Input processed successfully.\nChars: ${trace?.output_summary?.match(/\d+/)?.[0] || "N/A"}`;
+              }
+              return null;
+            };
+
+            const snapshot = getSnapshot();
 
             return (
               <div
                 key={ag.key}
+                onClick={() => isDone && snapshot ? setExpandedTrace(isExpanded ? null : ag.name) : undefined}
                 className={`border rounded-lg p-3 flex flex-col justify-between transition-all duration-300 relative shadow-sm ${
                   isDone
-                    ? "bg-background/80 border-accent/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
+                    ? isExpanded
+                      ? "bg-background/80 border-accent/60 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]"
+                      : "bg-background/80 border-accent/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] cursor-pointer hover:border-accent/50"
                     : isCurrent
                       ? "bg-accent/10 border-accent/60 glow-accent animate-pulse scale-[1.02]"
                       : "bg-background/20 border-darkBorder/40 opacity-40"
@@ -1384,13 +1404,20 @@ const renderAgentTraceFeed = () => (
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="text-[10px] font-mono font-bold text-neutral-500">{ag.key}</span>
-                    <span className={`w-2 h-2 rounded-full ${
-                      isDone 
-                        ? "bg-emerald-500" 
-                        : isCurrent 
-                          ? "bg-accent animate-ping" 
-                          : "bg-neutral-800"
-                    }`}></span>
+                    <div className="flex items-center gap-1.5">
+                      {isDone && snapshot && (
+                        <span className="text-[8px] font-mono text-accent/60">
+                          {isExpanded ? "▲" : "▼"}
+                        </span>
+                      )}
+                      <span className={`w-2 h-2 rounded-full ${
+                        isDone 
+                          ? "bg-emerald-500" 
+                          : isCurrent 
+                            ? "bg-accent animate-ping" 
+                            : "bg-neutral-800"
+                      }`}></span>
+                    </div>
                   </div>
                   <h4 className="text-xs font-bold text-white leading-tight">{ag.name}</h4>
                   <span className="text-[8px] font-mono text-neutral-500 uppercase mt-0.5 block leading-none">
@@ -1405,6 +1432,19 @@ const renderAgentTraceFeed = () => (
                       : isCurrent ? "Processing..." : trace?.output_summary || "Queued"}
                   </p>
                 </div>
+
+                {isExpanded && snapshot && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-3 pt-2 border-t border-accent/20"
+                  >
+                    <p className="text-[8px] font-mono text-accent/80 uppercase tracking-wider mb-1.5">Output Snapshot</p>
+                    <pre className="text-[10px] text-neutral-300 font-mono leading-relaxed whitespace-pre-wrap bg-slate-950/60 rounded p-2 border border-darkBorder/30">
+                      {snapshot}
+                    </pre>
+                  </motion.div>
+                )}
               </div>
             );
           })}
