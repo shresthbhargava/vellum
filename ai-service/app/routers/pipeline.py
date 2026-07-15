@@ -1,5 +1,5 @@
 """
-Vellum Pipeline - SSE Streaming Endpoints
+Vellum Pipeline — SSE Streaming Endpoints
 """
 
 import asyncio
@@ -37,6 +37,74 @@ class GenerateRequest(BaseModel):
 def sse_event(data: dict) -> str:
     return f"data: {json.dumps(data, default=str)}\n\n"
 
+
+# ── Vellum Score ────────────────────────────────────────────────
+
+def calculate_vellum_score(extracted: dict, brd: dict, review: dict, validation: dict | None) -> float:
+    """
+    Composite score 0–100 that signals overall BRD quality at a glance.
+
+    Weights:
+      - Extraction confidence  → 20%  (was the input well understood?)
+      - BRD completeness       → 25%  (did we produce all sections?)
+      - Critic quality score   → 35%  (is the BRD actually good?)
+      - Validation score       → 20%  (is the idea viable?)
+    """
+    scores = []
+    weights = []
+
+    # 1. Extraction confidence (0–1 → 0–100)
+    ext_conf = extracted.get("confidence", 0)
+    if isinstance(ext_conf, (int, float)) and ext_conf > 0:
+        scores.append(ext_conf * 100)
+        weights.append(0.20)
+    else:
+        scores.append(50)
+        weights.append(0.05)
+
+    # 2. BRD completeness — checks how many key sections have content
+    brd_keys = [
+        "executive_summary", "problem_statement", "proposed_solution",
+        "feature_list", "user_stories", "technical_architecture",
+        "success_metrics", "swot", "risks", "timeline", "competitors",
+    ]
+    filled = sum(1 for k in brd_keys if brd.get(k) and
+                 (isinstance(brd[k], str) and len(brd[k]) > 20) or
+                 (isinstance(brd[k], (list, dict)) and len(brd[k]) > 0))
+    completeness = (filled / len(brd_keys)) * 100
+    scores.append(completeness)
+    weights.append(0.25)
+
+    # 3. Critic overall score (1–10 → 0–100)
+    critic_score = review.get("overall_score", 0)
+    if isinstance(critic_score, (int, float)) and critic_score > 0:
+        scores.append((critic_score / 10) * 100)
+        weights.append(0.35)
+    else:
+        scores.append(50)
+        weights.append(0.10)
+
+    # 4. Validation score (0–1 or 0–10 → 0–100)
+    if validation:
+        val_score = validation.get("overall_score", 0)
+        if isinstance(val_score, (int, float)) and val_score > 0:
+            normalized = (val_score / 10) * 100 if val_score <= 10 else val_score * 100
+            scores.append(min(normalized, 100))
+            weights.append(0.20)
+        else:
+            scores.append(50)
+            weights.append(0.05)
+    else:
+        weights.append(0)
+
+    total_weight = sum(weights)
+    if total_weight == 0:
+        return 0.0
+    weighted = sum(s * w for s, w in zip(scores, weights))
+    return round(weighted / total_weight, 1)
+
+
+# ── Database helpers ───────────────────────────────────────────────
 
 def save_session_to_db(session_id: str, data: dict, user_id: str = "anonymous"):
     db = SessionLocal()
@@ -91,6 +159,8 @@ def load_session_from_db(session_id: str) -> dict | None:
     finally:
         db.close()
 
+
+# ── SSE Streaming endpoint ─────────────────────────────────────────
 
 @router.post("/stream")
 async def stream_generate(request: Request, user_id: str = Depends(get_current_user)):
@@ -185,12 +255,14 @@ async def stream_generate(request: Request, user_id: str = Depends(get_current_u
                 {"step": "5", "agent": "QualityAgent", "output_summary": f"Quality score: {review.get('overall_score', 'N/A')}/10 - {review.get('overall_verdict', 'N/A')}.", "tokens_used": 0},
             ]
 
+            vellum_score = calculate_vellum_score(extracted_dict, brd_dict, review, validation_result)
             elapsed = round((time.time() - start) * 1000, 1)
 
             session_data = {
                 "session_id": session_id,
                 "status": "success",
                 "startup_name": req.startup_name or extracted.business_name,
+                "vellum_score": vellum_score,
                 "traces": traces,
                 "brd": {
                     "executive_summary": brd_dict.get("executive_summary", ""),
@@ -230,12 +302,11 @@ async def stream_generate(request: Request, user_id: str = Depends(get_current_u
                 "domain": extracted.domain,
                 "raw_input": req.text_input,
                 "extracted_data": extracted_dict,
-                "enriched_data": competitive_data,
                 "brd_data": brd_dict,
                 "validation_data": validation_result,
                 "quality_review": review,
-                "competitive_intelligence": competitive_data,
                 "traces": traces,
+                "vellum_score": vellum_score,
                 "processing_time_ms": elapsed,
             }, user_id)
 
@@ -244,10 +315,10 @@ async def stream_generate(request: Request, user_id: str = Depends(get_current_u
                 "step": 5,
                 "agent": "QualityAgent",
                 "message": "BRD generation complete!",
-                "data": {"session_id": session_id, "processing_time_ms": elapsed},
+                "data": {"session_id": session_id, "processing_time_ms": elapsed, "vellum_score": vellum_score},
             })
 
-            logger.info("SSE Pipeline complete | session=%s | user=%s | %.0fms", session_id, user_id, elapsed)
+            logger.info("SSE Pipeline complete | session=%s | user=%s | %.0fms | score=%.1f", session_id, user_id, elapsed, vellum_score)
 
         except Exception as e:
             logger.error("SSE Pipeline failed | session=%s | %s", session_id, e)
@@ -268,6 +339,8 @@ async def stream_generate(request: Request, user_id: str = Depends(get_current_u
         },
     )
 
+
+# ── Non-streaming generate (kept for backward compat) ──────────────
 
 @router.post("/generate")
 def generate(request: GenerateRequest, user_id: str = Depends(get_current_user)):
@@ -319,6 +392,8 @@ def generate(request: GenerateRequest, user_id: str = Depends(get_current_user))
 
         comp_competitors = competitive_data.get("competitors", []) if competitive_data else brd_dict.get("competitors", [])
 
+        vellum_score = calculate_vellum_score(extracted_dict, brd_dict, review, validation_result)
+
         traces = [
             {"step": "1", "agent": "InputAgent", "output_summary": f"Validated input for {request.startup_name or 'idea'}.", "tokens_used": 0},
             {"step": "2", "agent": "ExtractionAgent", "output_summary": f"Extracted data for {extracted.business_name}.", "tokens_used": 0},
@@ -331,6 +406,7 @@ def generate(request: GenerateRequest, user_id: str = Depends(get_current_user))
         session_data = {
             "session_id": session_id, "status": "success",
             "startup_name": request.startup_name or extracted.business_name,
+            "vellum_score": vellum_score,
             "traces": traces,
             "brd": {
                 "executive_summary": brd_dict.get("executive_summary", ""),
@@ -366,7 +442,8 @@ def generate(request: GenerateRequest, user_id: str = Depends(get_current_user))
             "extracted_data": extracted_dict, "enriched_data": competitive_data,
             "brd_data": brd_dict, "validation_data": validation_result,
             "quality_review": review, "competitive_intelligence": competitive_data,
-            "traces": traces, "processing_time_ms": elapsed,
+            "traces": traces, "vellum_score": vellum_score,
+            "processing_time_ms": elapsed,
         }, user_id)
         return {"session_id": session_id, "status": "processing"}
 
@@ -374,6 +451,8 @@ def generate(request: GenerateRequest, user_id: str = Depends(get_current_user))
         logger.error("Pipeline failed | session=%s | %s", session_id, e)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── Session lookup endpoints ───────────────────────────────────────
 
 @router.get("/sessions/{session_id}/agents")
 def get_session(session_id: str):
@@ -394,3 +473,4 @@ def get_results(session_id: str):
     if db_session:
         sessions[session_id] = db_session
         return db_session
+    raise HTTPException(status_code=404, detail="Session not found")

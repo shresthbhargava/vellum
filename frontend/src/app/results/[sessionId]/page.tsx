@@ -2190,7 +2190,18 @@ const renderAgentTraceFeed = () => (
             );
           })}
         </div>
-
+        {data?.vellum_score && (
+  <div className="flex items-center gap-2">
+    <div className={`px-4 py-2 rounded-lg border ${
+      data.vellum_score >= 75 ? 'border-green-500/30 bg-green-500/10 text-green-400' :
+      data.vellum_score >= 50 ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' :
+      'border-red-500/30 bg-red-500/10 text-red-400'
+    }`}>
+      <div className="text-xs uppercase tracking-wider opacity-70 mb-0.5">Vellum Score</div>
+      <div className="text-2xl font-bold">{Math.round(data.vellum_score)}</div>
+    </div>
+  </div>
+)}
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="flex flex-col gap-6">
