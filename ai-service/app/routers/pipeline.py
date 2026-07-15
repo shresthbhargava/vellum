@@ -41,15 +41,6 @@ def sse_event(data: dict) -> str:
 # ── Vellum Score ────────────────────────────────────────────────
 
 def calculate_vellum_score(extracted: dict, brd: dict, review: dict, validation: dict | None) -> float:
-    """
-    Composite score 0–100 that signals overall BRD quality at a glance.
-
-    Weights:
-      - Extraction confidence  → 20%  (was the input well understood?)
-      - BRD completeness       → 25%  (did we produce all sections?)
-      - Critic quality score   → 35%  (is the BRD actually good?)
-      - Validation score       → 20%  (is the idea viable?)
-    """
     scores = []
     weights = []
 
@@ -57,34 +48,39 @@ def calculate_vellum_score(extracted: dict, brd: dict, review: dict, validation:
     ext_conf = extracted.get("confidence", 0)
     if isinstance(ext_conf, (int, float)) and ext_conf > 0:
         scores.append(ext_conf * 100)
-        weights.append(0.20)
+        weights.append(0.15)
     else:
         scores.append(50)
         weights.append(0.05)
 
-    # 2. BRD completeness — checks how many key sections have content
-    brd_keys = [
-        "executive_summary", "problem_statement", "proposed_solution",
-        "feature_list", "user_stories", "technical_architecture",
-        "success_metrics", "swot", "risks", "timeline", "competitors",
-    ]
-    filled = sum(1 for k in brd_keys if brd.get(k) and
-                 (isinstance(brd[k], str) and len(brd[k]) > 20) or
-                 (isinstance(brd[k], (list, dict)) and len(brd[k]) > 0))
-    completeness = (filled / len(brd_keys)) * 100
-    scores.append(completeness)
-    weights.append(0.25)
-
-    # 3. Critic overall score (1–10 → 0–100)
-    critic_score = review.get("overall_score", 0)
-    if isinstance(critic_score, (int, float)) and critic_score > 0:
-        scores.append((critic_score / 10) * 100)
-        weights.append(0.35)
+    # 2. Per-section critic scores (actually varies between BRDs)
+    sections = review.get("sections", {})
+    if sections:
+        section_scores = []
+        for sec_name, sec_data in sections.items():
+            if isinstance(sec_data, dict) and "score" in sec_data:
+                section_scores.append(sec_data["score"])
+        if section_scores:
+            avg_section = sum(section_scores) / len(section_scores)
+            scores.append((avg_section / 10) * 100)
+            weights.append(0.35)
+        else:
+            scores.append(50)
+            weights.append(0.10)
     else:
         scores.append(50)
         weights.append(0.10)
 
-    # 4. Validation score (0–1 or 0–10 → 0–100)
+    # 3. Overall critic score (1–10 → 0–100)
+    critic_score = review.get("overall_score", 0)
+    if isinstance(critic_score, (int, float)) and critic_score > 0:
+        scores.append((critic_score / 10) * 100)
+        weights.append(0.30)
+    else:
+        scores.append(50)
+        weights.append(0.10)
+
+    # 4. Validation score
     if validation:
         val_score = validation.get("overall_score", 0)
         if isinstance(val_score, (int, float)) and val_score > 0:
@@ -97,12 +93,26 @@ def calculate_vellum_score(extracted: dict, brd: dict, review: dict, validation:
     else:
         weights.append(0)
 
+    # 5. Content depth — penalize shallow BRDs
+    total_chars = 0
+    for key in ["executive_summary", "proposed_solution", "problem_statement"]:
+        val = brd.get(key, "")
+        if isinstance(val, str):
+            total_chars += len(val)
+        elif isinstance(val, dict):
+            total_chars += len(str(val))
+    feature_count = len(brd.get("feature_list", []))
+    depth_score = min((total_chars / 3000) * 100, 100)  # 3000+ chars = max
+    feature_bonus = min(feature_count * 5, 15)  # up to 15 bonus points for features
+    depth_final = min(depth_score + feature_bonus, 100)
+    scores.append(depth_final)
+    weights.append(0.20)
+
     total_weight = sum(weights)
     if total_weight == 0:
         return 0.0
     weighted = sum(s * w for s, w in zip(scores, weights))
     return round(weighted / total_weight, 1)
-
 
 # ── Database helpers ───────────────────────────────────────────────
 
