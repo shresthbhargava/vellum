@@ -1877,79 +1877,7 @@ const renderAgentTraceFeed = () => (
   );
 };
 
-  const renderCitationHighlights = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 14 * 0.1 }}
-      className="card-3d glass-card rounded-xl p-5 glow-accent h-full"
-    >
-      <div className="flex flex-col gap-2 mb-3 border-b border-darkBorder pb-2">
-        <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-neutral-400 mb-0">
-          CITATION HIGHLIGHTS (GROUNDING)
-        </h3>
-        <div className="flex items-center gap-2">
-          {currentTypingIndex === 14 && brd.citations && (
-            <span className="px-2 py-0.5 rounded bg-accent/20 border border-accent/30 text-accent font-mono text-[9px] uppercase tracking-wider animate-pulse">
-              Writing...
-            </span>
-          )}
-          {brd.citations && brd.citations.length > 0 && (
-            <ConfidenceBadge 
-              citations={brd.citations || []} 
-              content={getSectionText("citations", brd.citations)} 
-            />
-          )}
-        </div>
-      </div>
-      
-      {brd.citations && currentTypingIndex >= 14 ? (
-        <div className="flex flex-col gap-3 font-sans">
-          {brd.citations.map((cite, idx) => (
-            <div key={idx} className="p-3 bg-slate-950/60 border border-darkBorder rounded-lg">
-              <p className="text-[10px] text-slate-300 leading-relaxed italic">
-                &ldquo;
-                {currentTypingIndex === 14 ? (
-                  <TypeWriter text={cite.source_text} onDone={idx === (brd.citations?.length || 0) - 1 ? () => handleSectionDone(14) : undefined} />
-                ) : (
-                  cite.source_text
-                )}
-                &rdquo;
-              </p>
-              <div className="mt-2.5 pt-2 border-t border-darkBorder/30 flex justify-between items-center text-[9px] font-mono text-slate-500 uppercase font-bold">
-                <span>
-                  Confidence:{" "}
-                  <strong className="text-emerald-400">
-                    {currentTypingIndex === 14 ? (
-                      <TypeWriter text={`${(cite.confidence * 100).toFixed(0)}%`} />
-                    ) : (
-                      `${(cite.confidence * 100).toFixed(0)}%`
-                    )}
-                  </strong>
-                </span>
-                <span className="text-slate-400 text-[8px] tracking-tight">
-                  {currentTypingIndex === 14 ? (
-                    <TypeWriter text={cite.mapped_requirement} />
-                  ) : (
-                    cite.mapped_requirement
-                  )}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3 animate-pulse">
-          <div className="h-16 bg-zinc-900/50 border border-darkBorder/40 rounded-lg flex items-center justify-center">
-            <span className="text-[9px] font-mono text-zinc-500 tracking-wider">SPECS EXTRACTION PENDING...</span>
-          </div>
-          <div className="h-16 bg-zinc-900/50 border border-darkBorder/40 rounded-lg flex items-center justify-center">
-            <span className="text-[9px] font-mono text-zinc-500 tracking-wider">GROUNDING CHECK PENDING...</span>
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
+  
 
   const renderBigQueryAudit = () => (
     <div className="card-3d rounded-xl overflow-hidden no-print">
@@ -2924,9 +2852,7 @@ const renderAgentTraceFeed = () => (
 
             </div>
 
-            <div className="col-span-1 lg:col-span-3 flex flex-col gap-6">
-              {renderCitationHighlights()}
-            </div>
+            
           </div>
         )}
 
@@ -2997,43 +2923,7 @@ const renderAgentTraceFeed = () => (
                 </p>
               </div>
 
-              {/* Citation Panel */}
-              {(brdData?.brd?.citations?.length ?? 0) > 0 && (
-                <div className="border border-zinc-800 rounded-xl 
-                                p-6 bg-zinc-950/80 backdrop-blur">
-                  <h3 className="text-lg font-bold text-white 
-                                 font-mono mb-4 tracking-widest">
-                    📌 CITATION HIGHLIGHTS
-                  </h3>
-                  <div className="space-y-3">
-                    {brdData?.brd?.citations?.slice(0, 5)
-                      .map((c: any, i: number) => (
-                      <div key={i} 
-                           className="border border-zinc-700/50 
-                                      rounded-lg p-4 bg-zinc-900/50">
-                        <p className="text-zinc-300 text-sm 
-                                      italic mb-2">
-                          &quot;{c.claim || c.source_text}&quot;
-                        </p>
-                        <div className="flex items-center 
-                                        justify-between">
-                          <span className="text-blue-400 text-xs 
-                                           font-mono">
-                            SOURCE: {(c.source || 
-                              c.mapped_requirement || 
-                              'user_input').toUpperCase()}
-                          </span>
-                          <span className="text-green-400 text-xs 
-                                           font-mono">
-                            {Math.round((c.confidence || 0.85) * 100)}% 
-                            CONFIDENCE
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              
 
               {/* Competitive Analysis Section */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
