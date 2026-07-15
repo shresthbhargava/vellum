@@ -77,7 +77,7 @@ interface BRDSection {
   pricing_strategy?: { content: string };
   go_to_market?: { content: string };
 }
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface SessionState {
   session_id: string;
   status: "processing" | "success" | "failed";
@@ -88,43 +88,27 @@ interface SessionState {
   error: string | null;
   startup_name?: string;
   vellum_score?: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   validation?: { overall_score?: number; [key: string]: any };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   critic?: { overall_score?: number; overall_verdict?: string; sections?: Record<string, any>; [key: string]: any };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extraction?: { domain?: string; business_name?: string; target_users?: string; confidence?: number; [key: string]: any };
   competitive_intelligence?: {
-  market_overview?: string;
-  competitors?: Array<{
-    name: string;
-    type: string;
-    description?: string;
-    strengths?: string[];
-    weaknesses?: string[];
-    market_position?: string;
-    pricing_model?: string;
-    threat_level?: string;
-  }>;
-  extraction?: {
-  domain?: string;
-  business_name?: string;
-  target_users?: string;
-  confidence?: number;
-  [key: string]: any;
-};
-critic?: {
-  overall_score?: number;
-  overall_verdict?: string;
-  sections?: Record<string, any>;
-  [key: string]: any;
-};
-  market_gaps?: string[];
-  competitive_advantage_opportunities?: string[];
-  market_maturity?: string;
-  entry_barriers?: string[];
-  recommended_positioning?: string;
-} | null;
+    market_overview?: string;
+    competitors?: Array<{
+      name: string;
+      type: string;
+      description?: string;
+      strengths?: string[];
+      weaknesses?: string[];
+      market_position?: string;
+      pricing_model?: string;
+      threat_level?: string;
+    }>;
+    market_gaps?: string[];
+    competitive_advantage_opportunities?: string[];
+    market_maturity?: string;
+    entry_barriers?: string[];
+    recommended_positioning?: string;
+  } | null;
 }
 
 const TypeWriter = ({ text, speed = 8, onDone }: { text: string, speed?: number, onDone?: () => void }) => {
