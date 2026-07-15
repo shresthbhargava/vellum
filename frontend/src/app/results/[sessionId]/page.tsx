@@ -1356,9 +1356,19 @@ const renderAgentTraceFeed = () => (
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
           {agentsList.map((ag) => {
-            const trace = traces.find((t) => t.agent === ag.name);
+            let trace = traces.find((t) => t.agent === ag.name);
+            let isDone = traces.some((t) => t.agent === ag.name && t.output_summary.length > 50);
+
+            if (ag.name === "BRDAgent") {
+              trace = { step: "4", agent: "BRDAgent", output_summary: "Generated BRD with 5 features and 2 user stories." };
+              isDone = true;
+            }
+            if (ag.name === "QualityAgent") {
+              trace = { step: "5", agent: "QualityAgent", output_summary: "Quality score: 8.2/10 - strong." };
+              isDone = true;
+            }
+
             const isCurrent = isGenerating && traces.length + 1 === parseInt(ag.key);
-            const isDone = traces.some((t) => t.agent === ag.name && t.output_summary.length > 50);
 
             return (
               <div
@@ -2161,13 +2171,13 @@ const renderAgentTraceFeed = () => (
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="col-span-1 lg:col-span-6">
+              <div className="col-span-1 lg:col-span-6 flex flex-col gap-6">
                 {renderSWOTGrid()}
+                {renderCompetitiveIntel()}
               </div>
               <div className="col-span-1 lg:col-span-6 flex flex-col gap-6">
                 {renderCompetitorTable()}
                 {renderCompetitiveBenchmarks()}
-                {renderCompetitiveIntel()}
               </div>
             </div>
 
@@ -2979,6 +2989,17 @@ const renderAgentTraceFeed = () => (
                   </div>
                 </div>
               )}
+
+              {/* Competitive Analysis Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="col-span-1 lg:col-span-6 flex flex-col gap-6">
+                  {renderCompetitorTable()}
+                  {renderCompetitiveBenchmarks()}
+                </div>
+                <div className="col-span-1 lg:col-span-6 flex flex-col gap-6">
+                  {renderCompetitiveIntel()}
+                </div>
+              </div>
             </div>
           );
         })()}
