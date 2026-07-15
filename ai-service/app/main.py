@@ -39,10 +39,13 @@ app = FastAPI(
 # runs on :8081, this runs on :8500 — that's "cross-origin").
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://vellum11.netlify.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"],  
 )
 
 # ── Step 5: Register routers ────────────────────────────────────
