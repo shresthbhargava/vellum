@@ -59,3 +59,4 @@ wordninja==2.0.0
 pyenchant==3.3.0
 psycopg2-binary>=2.9.0
 sqlalchemy>=2.0.0
+python-jose[cryptography]>=3.3.0

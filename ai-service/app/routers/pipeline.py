@@ -8,7 +8,7 @@ import time
 import uuid
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -18,6 +18,7 @@ from app.services import competitive_agent
 from app.utils.logging_config import get_logger
 from app.database import SessionLocal
 from app.models.db_models import BRDSession
+from app.auth import get_current_user
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api", tags=["pipeline"])
@@ -37,7 +38,7 @@ def sse_event(data: dict) -> str:
     return f"data: {json.dumps(data, default=str)}\n\n"
 
 
-def save_session_to_db(session_id: str, data: dict):
+def save_session_to_db(session_id: str, data: dict, user_id: str = "anonymous"):
     db = SessionLocal()
     try:
         existing = db.query(BRDSession).filter(BRDSession.id == session_id).first()
@@ -45,8 +46,10 @@ def save_session_to_db(session_id: str, data: dict):
             for key, value in data.items():
                 if hasattr(existing, key):
                     setattr(existing, key, value)
+            if user_id and user_id != "anonymous":
+                existing.user_id = user_id
         else:
-            db_record = BRDSession(id=session_id, **data)
+            db_record = BRDSession(id=session_id, user_id=user_id, **data)
             db.add(db_record)
         db.commit()
         logger.info("Session saved to DB: %s", session_id)
@@ -73,6 +76,7 @@ def load_session_from_db(session_id: str) -> dict | None:
                 "brd": row.brd_data or {},
                 "validation": row.validation_data or {},
                 "quality_review": row.quality_review or {},
+                "competitive_intelligence": row.competitive_intelligence or {},
                 "traces": row.traces or [],
                 "vellum_score": row.vellum_score,
                 "processing_time_ms": row.processing_time_ms,
@@ -89,20 +93,18 @@ def load_session_from_db(session_id: str) -> dict | None:
 
 
 @router.post("/stream")
-async def stream_generate(request: Request):
+async def stream_generate(request: Request, user_id: str = Depends(get_current_user)):
     body = await request.json()
     req = GenerateRequest(**body)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         start = time.time()
         session_id = str(uuid.uuid4())
-        logger.info("SSE Pipeline start | session=%s | type=%s", session_id, req.input_type)
+        logger.info("SSE Pipeline start | session=%s | user=%s | type=%s", session_id, user_id, req.input_type)
 
         try:
-            # Step 0: Initializing
             yield sse_event({"type": "status", "step": 0, "agent": "system", "message": "Warming up agent pipeline..."})
 
-            # Step 1: Input validation
             raw_idea = req.text_input
             if req.startup_name:
                 raw_idea = f"{req.startup_name}. {raw_idea}"
@@ -119,7 +121,6 @@ async def stream_generate(request: Request):
 
             yield sse_event({"type": "status", "step": 1, "agent": "InputAgent", "message": f"Validated {len(raw_idea)} characters of input across {req.input_type} modality"})
 
-            # Step 2: Extraction
             yield sse_event({"type": "status", "step": 2, "agent": "ExtractionAgent", "message": "Extracting business data, domain, and key entities..."})
             extracted = await asyncio.to_thread(
                 extraction_agent.extract_business_data, raw_idea
@@ -127,7 +128,6 @@ async def stream_generate(request: Request):
             extracted_dict = extracted.model_dump()
             yield sse_event({"type": "status", "step": 2, "agent": "ExtractionAgent", "message": f"Extracted data for {extracted.business_name} in {extracted.domain} domain"})
 
-            # Step 3: Enrichment (validation agent if available)
             validation_result = None
             yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Enriching with industry context and competitive landscape..."})
             try:
@@ -143,7 +143,6 @@ async def stream_generate(request: Request):
             except Exception as e:
                 yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": f"Enrichment skipped: {str(e)[:60]}"})
 
-            # Step 3.5: Competitive Intelligence
             competitive_data = None
             yield sse_event({"type": "status", "step": 3, "agent": "EnrichmentAgent", "message": "Analyzing competitive landscape..."})
             try:
@@ -158,7 +157,6 @@ async def stream_generate(request: Request):
             except Exception as e:
                 logger.warning("Competitive agent failed: %s", e)
 
-            # Step 4: BRD Generation
             yield sse_event({"type": "status", "step": 4, "agent": "BRDAgent", "message": "Generating Business Requirements Document..."})
             brd_dict = await asyncio.to_thread(
                 brd_agent.generate_brd_draft, extracted_dict
@@ -167,7 +165,6 @@ async def stream_generate(request: Request):
             story_count = len(brd_dict.get("user_stories", []))
             yield sse_event({"type": "status", "step": 4, "agent": "BRDAgent", "message": f"Generated {feature_count} features and {story_count} user stories"})
 
-            # Step 5: Quality Review
             yield sse_event({"type": "status", "step": 5, "agent": "QualityAgent", "message": "Running quality review and scoring..."})
             try:
                 review = await asyncio.to_thread(
@@ -178,7 +175,6 @@ async def stream_generate(request: Request):
                 review = {"overall_score": 0, "overall_verdict": "unavailable", "sections": {}}
             yield sse_event({"type": "status", "step": 5, "agent": "QualityAgent", "message": f"Quality score: {review.get('overall_score', 'N/A')}/10"})
 
-            # Build session data
             comp_competitors = competitive_data.get("competitors", []) if competitive_data else brd_dict.get("competitors", [])
 
             traces = [
@@ -229,7 +225,6 @@ async def stream_generate(request: Request):
 
             sessions[session_id] = session_data
 
-            # Save to DB
             await asyncio.to_thread(save_session_to_db, session_id, {
                 "startup_name": req.startup_name or extracted.business_name,
                 "domain": extracted.domain,
@@ -239,11 +234,11 @@ async def stream_generate(request: Request):
                 "brd_data": brd_dict,
                 "validation_data": validation_result,
                 "quality_review": review,
+                "competitive_intelligence": competitive_data,
                 "traces": traces,
                 "processing_time_ms": elapsed,
-            })
+            }, user_id)
 
-            # Send complete event
             yield sse_event({
                 "type": "complete",
                 "step": 5,
@@ -252,7 +247,7 @@ async def stream_generate(request: Request):
                 "data": {"session_id": session_id, "processing_time_ms": elapsed},
             })
 
-            logger.info("SSE Pipeline complete | session=%s | %.0fms", session_id, elapsed)
+            logger.info("SSE Pipeline complete | session=%s | user=%s | %.0fms", session_id, user_id, elapsed)
 
         except Exception as e:
             logger.error("SSE Pipeline failed | session=%s | %s", session_id, e)
@@ -275,10 +270,10 @@ async def stream_generate(request: Request):
 
 
 @router.post("/generate")
-def generate(request: GenerateRequest):
+def generate(request: GenerateRequest, user_id: str = Depends(get_current_user)):
     start = time.time()
     session_id = str(uuid.uuid4())
-    logger.info("Pipeline start | session=%s | type=%s", session_id, request.input_type)
+    logger.info("Pipeline start | session=%s | user=%s | type=%s", session_id, user_id, request.input_type)
 
     try:
         raw_idea = request.text_input
@@ -370,9 +365,9 @@ def generate(request: GenerateRequest):
             "domain": extracted.domain, "raw_input": request.text_input,
             "extracted_data": extracted_dict, "enriched_data": competitive_data,
             "brd_data": brd_dict, "validation_data": validation_result,
-            "quality_review": review, "traces": traces,
-            "processing_time_ms": elapsed,
-        })
+            "quality_review": review, "competitive_intelligence": competitive_data,
+            "traces": traces, "processing_time_ms": elapsed,
+        }, user_id)
         return {"session_id": session_id, "status": "processing"}
 
     except Exception as e:
@@ -399,4 +394,3 @@ def get_results(session_id: str):
     if db_session:
         sessions[session_id] = db_session
         return db_session
-    raise HTTPException(status_code=404, detail="Session not found")

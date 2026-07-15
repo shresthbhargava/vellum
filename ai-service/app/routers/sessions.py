@@ -1,27 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.database import get_db
 from app.models.db_models import BRDSession
-from app.config import settings
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
-
-
-def verify_access(x_vellum_key: str = Header(default=None)):
-    if not x_vellum_key or x_vellum_key != settings.sessions_api_key:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 @router.get("")
 def list_sessions(
     limit: int = 20,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_access),
+    user_id: str = Depends(get_current_user),
 ):
     rows = (
         db.query(BRDSession)
+        .filter(BRDSession.user_id == user_id)
         .order_by(desc(BRDSession.created_at))
         .limit(limit)
         .all()
@@ -43,9 +39,12 @@ def list_sessions(
 def get_session(
     session_id: str,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_access),
+    user_id: str = Depends(get_current_user),
 ):
-    row = db.query(BRDSession).filter(BRDSession.id == session_id).first()
+    row = db.query(BRDSession).filter(
+        BRDSession.id == session_id,
+        BRDSession.user_id == user_id,
+    ).first()
     if not row:
         raise HTTPException(status_code=404, detail="Session not found")
     return {
@@ -58,6 +57,7 @@ def get_session(
         "brd_data": row.brd_data or {},
         "validation_data": row.validation_data or {},
         "quality_review": row.quality_review or {},
+        "competitive_intelligence": row.competitive_intelligence or {},
         "traces": row.traces or [],
         "vellum_score": row.vellum_score,
         "processing_time_ms": row.processing_time_ms,
