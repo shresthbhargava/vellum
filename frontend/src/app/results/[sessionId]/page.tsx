@@ -1392,9 +1392,7 @@ const renderAgentTraceFeed = () => (
                   <p className="text-[9px] text-neutral-400 font-mono leading-snug line-clamp-3">
                     {isDone 
                       ? trace?.output_summary 
-                      : isCurrent 
-                        ? "Running extraction calculations..." 
-                        : "Awaiting preceding node..."}
+                      : isCurrent ? "Processing..." : trace?.output_summary || "Queued"}
                   </p>
                 </div>
               </div>
@@ -1660,6 +1658,91 @@ const renderAgentTraceFeed = () => (
       )}
     </motion.div>
   );
+    const renderCompetitiveBenchmarks = () => {
+    const ci = data?.competitive_intelligence;
+    const competitors = ci?.competitors;
+    if (!competitors || competitors.length === 0) return null;
+
+    const threatColor = (level: string) => {
+      const l = (level || "").toLowerCase();
+      if (l === "high") return "bg-red-500/15 text-red-400 border-red-500/30";
+      if (l === "medium") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+      if (l === "low") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+      return "bg-zinc-500/15 text-zinc-400 border-zinc-500/30";
+    };
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 13 * 0.1 }}
+        className="card-3d glass-card rounded-xl p-5 glow-accent"
+      >
+        <div className="flex justify-between items-center mb-3 border-b border-darkBorder pb-2">
+          <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-neutral-400 mb-0">
+            COMPETITIVE BENCHMARKS
+          </h3>
+          <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-mono uppercase font-bold">
+            {competitors.length} competitors
+          </span>
+        </div>
+
+        <div className="space-y-2.5">
+          {competitors.map((comp: { name?: string; threat_level?: string; pricing_model?: string; strengths?: string[]; weaknesses?: string[] }, i: number) => (
+            <div key={i} className="p-3 rounded-lg bg-slate-950/60 border border-darkBorder">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-zinc-500">#{i + 1}</span>
+                  <span className="text-sm font-sans font-bold text-white">{comp.name || "Unknown"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {comp.pricing_model && (
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-darkBorder text-[9px] text-zinc-400 font-mono">
+                      {comp.pricing_model}
+                    </span>
+                  )}
+                  {comp.threat_level && (
+                    <span className={`px-1.5 py-0.5 rounded border text-[9px] font-mono font-bold uppercase ${threatColor(comp.threat_level)}`}>
+                      {comp.threat_level}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {comp.strengths && comp.strengths.length > 0 && (
+                  <div>
+                    <p className="text-[9px] font-mono text-emerald-500/70 uppercase tracking-wider mb-1">Strengths</p>
+                    <ul className="space-y-0.5">
+                      {comp.strengths.map((s: string, j: number) => (
+                        <li key={j} className="text-[10px] text-neutral-400 font-sans flex items-start gap-1.5">
+                          <span className="text-emerald-500 mt-0.5 flex-shrink-0">+</span>
+                          <span>{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {comp.weaknesses && comp.weaknesses.length > 0 && (
+                  <div>
+                    <p className="text-[9px] font-mono text-red-500/70 uppercase tracking-wider mb-1">Weaknesses</p>
+                    <ul className="space-y-0.5">
+                      {comp.weaknesses.map((w: string, j: number) => (
+                        <li key={j} className="text-[10px] text-neutral-400 font-sans flex items-start gap-1.5">
+                          <span className="text-red-500 mt-0.5 flex-shrink-0">-</span>
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  };
   const renderCompetitiveIntel = () => {
   const ci = data?.competitive_intelligence;
   if (!ci) return null;
@@ -2083,6 +2166,7 @@ const renderAgentTraceFeed = () => (
               </div>
               <div className="col-span-1 lg:col-span-6 flex flex-col gap-6">
                 {renderCompetitorTable()}
+                {renderCompetitiveBenchmarks()}
                 {renderCompetitiveIntel()}
               </div>
             </div>
