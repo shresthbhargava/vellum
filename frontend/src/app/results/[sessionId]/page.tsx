@@ -77,7 +77,6 @@ interface BRDSection {
   pricing_strategy?: { content: string };
   go_to_market?: { content: string };
 }
-/* eslint-disable @typescript-eslint/no-explicit-any */
 interface SessionState {
   session_id: string;
   status: "processing" | "success" | "failed";
@@ -88,9 +87,9 @@ interface SessionState {
   error: string | null;
   startup_name?: string;
   vellum_score?: number;
-  validation?: { overall_score?: number; [key: string]: any };
-  critic?: { overall_score?: number; overall_verdict?: string; sections?: Record<string, any>; [key: string]: any };
-  extraction?: { domain?: string; business_name?: string; target_users?: string; confidence?: number; [key: string]: any };
+  validation?: { overall_score?: number };
+  critic?: { overall_score?: number; overall_verdict?: string; sections?: Record<string, Record<string, string>> };
+  extraction?: { domain?: string; business_name?: string; target_users?: string; confidence?: number };
   competitive_intelligence?: {
     market_overview?: string;
     competitors?: Array<{
@@ -141,7 +140,6 @@ const TypeWriter = ({ text, speed = 8, onDone }: { text: string, speed?: number,
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const calculateInvestorScore = (brd: any) => {
   if (!brd) return { score: 0, checks: [] };
   
@@ -211,7 +209,6 @@ const calculateInvestorScore = (brd: any) => {
   return { score, checks };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const InvestorScore = ({ brd }: { brd: any; isLarge?: boolean }) => {
   const { score, checks } = calculateInvestorScore(brd);
   
@@ -338,7 +335,6 @@ const extractMarketData = (content: string) => {
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MarketVisualizer = ({ content }: { content: string }) => {
   const { tam, sam, som } = extractMarketData(content);
   const [animated, setAnimated] = useState(false);
@@ -426,7 +422,6 @@ const MarketVisualizer = ({ content }: { content: string }) => {
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ConfidenceBadge = ({ citations, content }: { 
   citations: { confidence?: number }[], 
   content: string 
@@ -664,7 +659,6 @@ export default function ResultsPage() {
   }, [sessionId]);
   
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   const getSectionText = (key: string, val: any): string => {
     if (!val) return "";
     if (typeof val === "string") return val;
@@ -1368,22 +1362,22 @@ const renderAgentTraceFeed = () => (
                 const ext = data.extraction;
                 return `Domain: ${ext.domain}\nBusiness: ${ext.business_name}\nTarget Users: ${ext.target_users || "N/A"}\nConfidence: ${ext.confidence || "N/A"}`;
               }
-              if (ag.name === "EnrichmentAgent" && data?.competitive_intelligence) {
-                const ci = data.competitive_intelligence;
-                return `Market Maturity: ${ci.market_maturity || "N/A"}\nCompetitors Found: ${ci.competitors?.length || 0}\nMarket Gaps: ${ci.market_gaps?.length || 0}\nEntry Barriers: ${ci.entry_barriers?.length || 0}`;
-              }
-              if (ag.name === "BRDAgent" && data?.brd) {
-                const b = data.brd;
-                return `Features: ${b.functional_requirements?.length || 0}\nUser Stories: ${b.user_stories?.length || 0}\nNFRs: ${b.non_functional_requirements?.length || 0}\nRisks: ${b.risks?.length || 0}`;
-              }
-              if (ag.name === "QualityAgent" && data?.critic) {
-                const c = data.critic;
-                const sections = c.sections ? Object.keys(c.sections).join(", ") : "N/A";
-                return `Score: ${c.overall_score || "N/A"}/10\nVerdict: ${c.overall_verdict || "N/A"}\nSections Reviewed: ${sections}`;
-              }
-              if (ag.name === "InputAgent" && data?.extraction) {
-                return `Input processed successfully.\nChars: ${trace?.output_summary?.match(/\d+/)?.[0] || "N/A"}`;
-              }
+                          if (ag.name === "EnrichmentAgent" && data?.competitive_intelligence) {
+              const ci = data.competitive_intelligence;
+              return `Market Maturity: ${ci.market_maturity || "N/A"}\nCompetitors Found: ${ci.competitors?.length || 0}\nMarket Gaps: ${ci.market_gaps?.length || 0}\nEntry Barriers: ${ci.entry_barriers?.length || 0}`;
+            }
+            if (ag.name === "BRDAgent" && data?.brd) {
+              const b = data.brd;
+              return `Features: ${b.functional_requirements?.length || 0}\nUser Stories: ${b.user_stories?.length || 0}\nNFRs: ${b.non_functional_requirements?.length || 0}\nRisks: ${b.risks?.length || 0}`;
+            }
+            if (ag.name === "QualityAgent" && data?.critic) {
+              const c = data.critic;
+              const sectionCount = c.sections ? Object.keys(c.sections).length : 0;
+              return `Score: ${c.overall_score || "N/A"}/10\nVerdict: ${c.overall_verdict || "N/A"}\nSections Reviewed: ${sectionCount}`;
+            }
+            if (ag.name === "InputAgent" && trace?.output_summary) {
+              return `Input processed successfully.`;
+            }
               return null;
             };
 
@@ -2927,7 +2921,6 @@ const renderAgentTraceFeed = () => (
 
         {/* MARKET ANALYSIS TAB */}
         {activeTab === 'market' && (() => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rawMarket = brdData?.brd?.target_market as any;
           const marketText = typeof rawMarket === 'string' 
             ? rawMarket 
@@ -3003,7 +2996,6 @@ const renderAgentTraceFeed = () => (
                   </h3>
                   <div className="space-y-3">
                     {brdData?.brd?.citations?.slice(0, 5)
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       .map((c: any, i: number) => (
                       <div key={i} 
                            className="border border-zinc-700/50 
