@@ -88,8 +88,9 @@ interface SessionState {
   error: string | null;
   startup_name?: string;
   vellum_score?: number;
-  validation?: { overall_score?: number };
-  critic?: { overall_score?: number };
+    validation?: { overall_score?: number; [key: string]: any };
+  critic?: { overall_score?: number; overall_verdict?: string; sections?: Record<string, any>; [key: string]: any };
+  extraction?: { domain?: string; business_name?: string; target_users?: string; confidence?: number; [key: string]: any };
   competitive_intelligence?: {
   market_overview?: string;
   competitors?: Array<{
@@ -102,6 +103,19 @@ interface SessionState {
     pricing_model?: string;
     threat_level?: string;
   }>;
+  extraction?: {
+  domain?: string;
+  business_name?: string;
+  target_users?: string;
+  confidence?: number;
+  [key: string]: any;
+};
+critic?: {
+  overall_score?: number;
+  overall_verdict?: string;
+  sections?: Record<string, any>;
+  [key: string]: any;
+};
   market_gaps?: string[];
   competitive_advantage_opportunities?: string[];
   market_maturity?: string;
@@ -466,7 +480,7 @@ const ConfidenceBadge = ({ citations, content }: {
 export default function ResultsPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
-
+  const [expandedTrace, setExpandedTrace] = useState<string | null>(null);
   const [data, setData] = useState<SessionState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -477,6 +491,7 @@ export default function ResultsPage() {
   const [copiedName, setCopiedName] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [lang, setLang] = useState<Language>('en');
+  
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

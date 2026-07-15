@@ -146,7 +146,7 @@ export default function GeneratePage() {
   const [inputType, setInputType] = useState<"text" | "image" | "pdf">("text");
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [expandedTrace, setExpandedTrace] = useState<string | null>(null);
+  
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
