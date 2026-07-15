@@ -40,3 +40,6 @@ class Settings:
         if not self.groq_api_key:
             problems.append("GROQ_API_KEY is not set — LLM calls will fail")
         return problems
+    
+# Singleton instance - import this everywhere
+settings = Settings()
