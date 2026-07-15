@@ -88,8 +88,11 @@ interface SessionState {
   error: string | null;
   startup_name?: string;
   vellum_score?: number;
-    validation?: { overall_score?: number; [key: string]: any };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  validation?: { overall_score?: number; [key: string]: any };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   critic?: { overall_score?: number; overall_verdict?: string; sections?: Record<string, any>; [key: string]: any };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extraction?: { domain?: string; business_name?: string; target_users?: string; confidence?: number; [key: string]: any };
   competitive_intelligence?: {
   market_overview?: string;
