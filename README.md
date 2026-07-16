@@ -1,28 +1,125 @@
-<div align="center">
+<p align="center">
+  <img src="https://img.shields.io/badge/Built%20With-FastAPI%20%2B%20Next.js%20%2B%20Groq-000?style=for-the-badge&logo=fastapi&logoColor=white" alt="Tech Stack" />
+  <img src="https://img.shields.io/badge/Status-Active%20Development-amber?style=for-the-badge" alt="Status" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License" />
+</p>
 
-# Vellum
+<h1 align="center">
+  <span style="color: #f59e0b;">▌</span> Vellum
+</h1>
 
-**AI-Powered Startup Intelligence Platform**
-
-*Validate ideas. Generate BRDs. Download PDFs. Leave.*
-
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-15-111111?logo=nextdotjs&logoColor=white)](https://nextjs.org)
-[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3-F55036?logo=groq&logoColor=white)](https://groq.com)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-</div>
+<p align="center">
+  <strong>AI-Powered Startup Intelligence Platform</strong><br/>
+  Transform raw startup ideas into production-grade Business Requirements Documents<br/>
+  in under 60 seconds — with competitive analysis, quality scoring, and actionable insights.
+</p>
 
 ---
 
-## The Philosophy
+## Table of Contents
 
-**Come. Search. Go.**
+- [The Problem](#the-problem)
+- [What is Vellum](#what-is-vellum)
+- [How It Works](#how-it-works)
+- [Architecture](#architecture)
+- [Edge Technology](#edge-technology)
+- [Vellum Score](#vellum-score)
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [API Reference](#api-reference)
+- [Deployment](#deployment)
+- [Roadmap](#roadmap)
+- [License](#license)
 
-Vellum is a zero-friction startup intelligence tool. No accounts. No sessions. No dashboards. You type a startup idea, and Vellum returns a production-grade Business Requirements Document (BRD) with an AI-derived quality score — ready to download as a PDF.
+---
 
-Every decision in Vellum's architecture optimizes for **speed to insight**. A user should go from "I have an idea" to holding a professional BRD in under 90 seconds.
+## The Problem
+
+Every year, **millions of founders** start building products without a structured plan. The result is predictable:
+
+- **80% of startups fail**, and the #1 reason is **no market need** — a problem a solid BRD catches on day one.
+- Writing a Business Requirements Document takes **3-5 days** for an experienced product manager, and **most early-stage founders don't have one**.
+- Existing tools are broken for this use case:
+  - **Notion / Google Docs** — blank pages, no structure, no intelligence
+  - **Jira / Azure DevOps** — built for engineering teams managing sprints, not founders defining vision
+  - **ChatGPT / Claude** — generic outputs, no structured format, no competitive context, no quality scoring
+  - **Traditional BRD tools** — enterprise-only, expensive, require trained PMs
+
+**There is no tool that takes a raw idea and produces a structured, scored, competitive-aware BRD in seconds.** Vellum fills this gap.
+
+---
+
+## What is Vellum
+
+**Vellum** is an AI-powered platform that transforms unstructured startup ideas into comprehensive Business Requirements Documents (BRDs) using a multi-agent pipeline. It doesn't just generate text — it **extracts, enriches, generates, reviews, and scores** your startup's requirements in a single streaming pipeline.
+
+### Who is it for?
+
+| Audience | Use Case |
+|---|---|
+| **Solo Founders** | Go from idea → structured plan in 60 seconds before writing a single line of code |
+| **Early-Stage Startups** | Generate investor-ready documentation for pitch decks and grant applications |
+| **Hackathon Teams** | Rapidly spec out your project so the team can start building immediately |
+| **Incubators / Accelerators** | Standardize how portfolio companies document their product vision |
+| **Product Managers** | Jumpstart the BRD process and get AI-powered quality feedback |
+| **Venture Capitalists** | Evaluate the structure and completeness of a founder's product thinking |
+
+### Niche
+
+Vellum operates in the **AI-native product intelligence** space — specifically the intersection of:
+- **AI-assisted product management** (generative AI for documentation)
+- **Startup tooling** (founder-focused, not enterprise-focused)
+- **Competitive intelligence** (automated market analysis)
+
+This niche is **underserved**: most AI writing tools focus on marketing copy or code generation. No one is building **structured product intelligence** for founders.
+
+---
+
+## How It Works
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│             │     │              │     │             │     │              │     │              │
+│  Raw Idea   │────▶│  Extraction  │────▶│  Enrichment │────▶│    BRD       │────▶│   Quality    │
+│  (text/     │     │  Agent       │     │  Agent      │     │  Generation  │     │   Review     │
+│   image/    │     │              │     │              │     │  Agent       │     │   Agent      │
+│   PDF)      │     │  • Name      │     │  • Competi- │     │              │     │              │
+│             │     │  • Domain    │     │    tors     │     │  • Exec      │     │  • Per-      │
+│             │     │  • Users     │     │  • Market   │     │    Summary   │     │    section   │
+│             │     │  • Features  │     │    analysis │     │  • Features  │     │    scores    │
+│             │     │  • Problem   │     │  • Idea     │     │  • User      │     │  • Overall   │
+│             │     │    statement │     │    validn.  │     │    Stories   │     │    verdict   │
+│             │     │  • Conf.     │     │              │     │  • SWOT      │     │  • Feedback  │
+│             │     │    score     │     │              │     │  • Risks     │     │              │
+│             │     │              │     │              │     │  • Timeline  │     │              │
+└─────────────┘     └──────────────┘     └─────────────┘     └──────────────┘     └──────────────┘
+                                                                                         │
+                                                                                         ▼
+                                                                               ┌──────────────┐
+                                                                               │              │
+                                                                               │    Vellum    │
+                                                                               │    Score     │
+                                                                               │   (0 - 100)  │
+                                                                               │              │
+                                                                               └──────────────┘
+```
+
+**Step-by-step:**
+
+1. **Input** — User submits a startup idea (text, image, or PDF). Multimodal support uses vision models to extract text from screenshots and documents.
+
+2. **Extraction Agent** — Structured extraction of business name, domain, target users, key features, problem statement, and confidence score using fine-tuned LLM prompts.
+
+3. **Enrichment Agent** — Competitive landscape analysis, market maturity assessment, and idea validation. Identifies direct/indirect competitors with threat levels and pricing intelligence.
+
+4. **BRD Generation Agent** — Produces a full Business Requirements Document with 11+ sections: executive summary, problem statement, objectives, scope, stakeholders, functional/non-functional requirements, user stories, technical architecture, SWOT analysis, risks, timeline, and success metrics.
+
+5. **Quality Review Agent** — Independent LLM call that evaluates the BRD against the original input. Scores each section on accuracy, specificity, and completeness. Provides actionable improvement suggestions.
+
+6. **Vellum Score** — Composite 0-100 score calculated from extraction confidence, per-section critic scores, overall quality, content depth, and validation results.
+
+The entire pipeline runs as **Server-Sent Events (SSE)** — the user sees real-time progress as each agent completes.
 
 ---
 
@@ -30,268 +127,295 @@ Every decision in Vellum's architecture optimizes for **speed to insight**. A us
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          USER BROWSER                              │
-│                   Next.js (Port 3000)                              │
-│  ┌──────────┐  ┌──────────────┐  ┌──────────┐  ┌───────────────┐  │
-│  │  Home /  │  │  Validate   │  │ Generate │  │   Results     │  │
-│  │  Landing │  │  Idea Page  │  │   Page   │  │   + PDF DL    │  │
-│  └────┬─────┘  └──────┬───────┘  └────┬─────┘  └───────┬───────┘  │
-│       └────────────────┼────────────────┼────────────────┘          │
-│                     REST API (fetch)                              │
-└─────────────────────────┬───────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     FastAPI Backend (Port 8500)                    │
-│  ┌────────────────────────────────────────────────────────────┐    │
-│  │                    Pipeline Orchestrator                    │    │
-│  │  Extract → Generate BRD → Quality Review → Validate → Score │    │
-│  └──────────┬──────────┬──────────────┬────────────┬───────────┘    │
-│             │          │              │            │                  │
-│  ┌──────────▼──┐ ┌─────▼──────┐ ┌────▼─────┐ ┌──▼─────────────┐   │
-│  │ Extraction  │ │    BRD     │ │  Critic  │ │   Validation   │   │
-│  │  Service    │ │  Generator │ │  Service │ │    Service     │   │
-│  │ (8b-fast)   │ │ (70b-vers) │ │(70b-vers)│ │  (70b-vers)   │   │
-│  └─────────────┘ └────────────┘ └──────────┘ └────────────────┘   │
-│             │          │              │            │                  │
-│             └──────────┴──────────────┴────────────┘                  │
-│                               │                                     │
-│                    ┌──────────▼──────────┐                          │
-│                    │   SQLAlchemy ORM    │                          │
-│                    │   SQLite (vellum.db)│                          │
-│                    └─────────────────────┘                          │
-│                               │                                     │
-│                    ┌──────────▼──────────┐                          │
-│                    │  PDF Export (ReportLab)                         │
-│                    └─────────────────────┘                          │
-└─────────────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Groq Cloud (LLMs)                           │
-│  llama-3.3-70b-versatile  │  llama-3.1-8b-instant                 │
-│  (BRD / Validation / Critic)  (Extraction)                          │
+│                        NETLIFY (CDN + SSR)                         │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │                    Next.js 14 (App Router)                    │  │
+│  │                                                               │  │
+│  │  ┌─────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐  │  │
+│  │  │ Landing │  │ Generate │  │ Results  │  │    History    │  │  │
+│  │  │   Page  │  │   Page   │  │   Page   │  │    Page      │  │  │
+│  │  └─────────┘  └────┬─────┘  └────┬─────┘  └──────┬────────┘  │  │
+│  │                    │              │               │           │  │
+│  │  ┌─────────────────┴──────────────┴───────────────┘           │  │
+│  │  │              Supabase Auth (SSR)                          │  │
+│  │  │         Google + GitHub OAuth                              │  │
+│  │  └───────────────────────────────────────────────────────────┘  │  │
+│  └───────────────────────────┬───────────────────────────────────┘  │
+│                              │ SSE / REST                          │
+└──────────────────────────────┼──────────────────────────────────────┘
+                               │
+┌──────────────────────────────┼──────────────────────────────────────┐
+│                        RENDER (Backend)                            │
+│  ┌───────────────────────────┴───────────────────────────────────┐  │
+│  │                    FastAPI (Python 3.11)                       │  │
+│  │                                                               │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌─────────────────────────┐  │  │
+│  │  │  Pipeline  │  │  Sessions  │  │  Standalone Agents      │  │  │
+│  │  │  Router    │  │  Router    │  │  (Extraction, BRD,      │  │  │
+│  │  │  (SSE)     │  │  (CRUD)    │  │   Critic, Competitive)  │  │  │
+│  │  └─────┬──────┘  └─────┬──────┘  └───────────┬─────────────┘  │  │
+│  │        │               │                      │               │  │
+│  │  ┌─────┴───────────────┴──────────────────────┴───────────┐   │  │
+│  │  │                  Groq LLM Client                       │   │  │
+│  │  │         (Llama 3.3 70B + 8B with fallback)             │   │  │
+│  │  └────────────────────────┬──────────────────────────────┘   │  │
+│  └───────────────────────────┼───────────────────────────────────┘  │
+│                              │                                     │
+│  ┌───────────────────────────┴───────────────────────────────────┐  │
+│  │                  Supabase PostgreSQL                          │  │
+│  │         (Sessions, Traces, BRD Data, Scores)                 │  │
+│  └──────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### How It Works
+### Key Design Decisions
 
-1. **Input** — User enters a startup idea (text) or uploads a document/image (multimodal).
-2. **Extraction** — `llama-3.1-8b-instant` rapidly extracts structured fields: problem, target market, industry, key features.
-3. **BRD Generation** — `llama-3.3-70b-versatile` produces a full Business Requirements Document with 12+ sections.
-4. **Quality Review (Critic)** — A second `llama-3.3-70b-versatile` pass independently scores the BRD across 8 quality dimensions.
-5. **Idea Validation** — Scores the raw idea across 5 dimensions: market viability, technical feasibility, innovation, scalability, revenue potential.
-6. **Vellum Score** — Composite metric: `0.4 × validation_score + 0.6 × critic_score`. Green (≥7.5), Amber (≥5.5), Red (<5.5).
-7. **PDF Export** — ReportLab generates a production-ready A4 PDF in-memory — no external services.
+| Decision | Rationale |
+|---|---|
+| **SSE over WebSocket** | Simpler to implement, works through CDNs/proxies, no persistent connection overhead. One-directional (server → client) is all we need. |
+| **Groq over OpenAI** | 10-20x faster inference on open-source models (Llama 3.3 70B). Sub-second time-to-first-token. Dramatically reduces pipeline latency. |
+| **Supabase Auth over Clerk** | Clerk blocks `.netlify.app` domains in production. Supabase supports any domain with configurable OAuth providers. |
+| **JWT verification without signature check** | Supabase migrated to per-project JWT Signing Keys, making legacy secret verification incompatible. Since only our frontend calls our API, skipping signature verification is acceptable. |
+| **JSON columns over normalized tables** | BRD data has 15+ nested fields. Normalizing would need 10+ tables and complex JOINs. JSON keeps reads simple: dump the whole dict, query later. |
+| **In-memory cache + DB fallback** | Freshly generated sessions are cached in-memory for instant retrieval. Older sessions fall through to PostgreSQL. No stale cache issues. |
 
-All pipeline state is persisted to SQLite via SQLAlchemy. Restart the server; sessions survive.
+---
+
+## Edge Technology
+
+Vellum leverages several cutting-edge technologies and patterns:
+
+### 1. Multi-Agent AI Pipeline
+Each pipeline step is a **specialized agent** with its own system prompt, model selection, and output schema. This is fundamentally different from a single monolithic LLM call:
+- **Extraction Agent** uses the 8B model (fast, structured output)
+- **BRD Generation Agent** uses the 70B model (creative, long-form)
+- **Quality Review Agent** uses the 70B model with low temperature (evaluative, precise)
+- **Competitive Agent** uses the 70B model (analytical, domain-aware)
+
+### 2. Server-Sent Events (SSE) Streaming
+The entire pipeline streams progress to the frontend in real-time. Users see each agent activate, process, and complete — not a spinner for 30 seconds. Each SSE event includes structured data (feature counts, confidence scores, competitor counts).
+
+### 3. LLM-as-Judge Pattern
+The Quality Review Agent is a separate LLM call that **evaluates** the BRD independently. This "LLM-as-Judge" pattern is emerging in AI research (Zheng et al., 2023) and provides:
+- Transparent, per-section quality scores
+- Actionable feedback (not just a number)
+- Detection of hallucinated content
+
+### 4. Composite AI Scoring (Vellum Score)
+A weighted multi-signal scoring algorithm that combines:
+- Extraction confidence (input understanding)
+- Per-section critic scores (granular quality)
+- Overall critic verdict (holistic assessment)
+- Content depth analysis (shallow vs. comprehensive)
+- Idea validation (market viability)
+
+### 5. Multimodal Input Processing
+Users can submit ideas as text, images (screenshots, whiteboard photos), or PDFs. The vision model extracts text from images before the pipeline processes it — enabling non-text ideation workflows.
+
+### 6. Groq LPU Inference Engine
+Vellum runs on **Groq's LPU (Language Processing Unit)** chips, which provide:
+- **~500 tokens/second** generation speed (vs. ~50 tokens/sec on traditional GPUs)
+- Sub-200ms time-to-first-token
+- This makes the full 5-agent pipeline complete in **under 60 seconds** end-to-end
+
+---
+
+## Vellum Score
+
+The **Vellum Score** is a composite 0-100 metric that summarizes BRD quality at a glance. It's calculated from multiple signals with dynamic weight redistribution.
+
+### Scoring Components
+
+| Component | Weight | What It Measures | Range |
+|---|---|---|---|
+| **Per-Section Critic Scores** | 35% | Average quality across all BRD sections (accuracy, specificity, completeness) | 0-100 |
+| **Overall Critic Score** | 30% | Holistic BRD quality assessment | 0-100 |
+| **Content Depth** | 20% | Character count of key sections + feature count bonus | 0-100 |
+| **Extraction Confidence** | 15% | How well the AI understood the input | 0-100 |
+| **Idea Validation** | 20% | Market viability and feasibility (when available) | 0-100 |
+
+### Dynamic Weight Redistribution
+When validation data is unavailable (validation agent not loaded), its weight is redistributed proportionally to the other components, ensuring the score always reflects available information.
+
+### Score Interpretation
+
+| Range | Color | Meaning |
+|---|---|---|
+| **75-100** | 🟢 Green | Strong BRD — well-structured, specific, and comprehensive |
+| **50-74** | 🟡 Yellow | Acceptable — usable but has gaps or vague sections |
+| **0-49** | 🔴 Red | Weak — significant issues, needs major revision |
+
+---
+
+## Key Features
+
+### Core
+- **One-Click BRD Generation** — Submit an idea, get a full BRD in under 60 seconds
+- **Multimodal Input** — Text, images (screenshots, whiteboards), and PDF documents
+- **Real-Time Pipeline Progress** — Watch each AI agent work via SSE streaming
+- **Vellum Score** — Instant quality assessment with composite scoring algorithm
+
+### Intelligence
+- **Competitive Analysis** — Automated competitor identification with threat levels, pricing, and SWOT
+- **Competitive Benchmarks** — Side-by-side feature comparison cards
+- **Market Intelligence** — Market maturity assessment and positioning analysis
+- **SWOT Analysis** — Auto-generated strengths, weaknesses, opportunities, threats
+
+### Quality
+- **Per-Section Quality Scores** — Each BRD section rated on accuracy, specificity, and completeness
+- **Actionable Feedback** — Specific improvement suggestions, not just scores
+- **Key Strengths Detection** — Highlights what the BRD does well
+
+### Export & Share
+- **Word Document Export** — Formatted .docx with professional styling
+- **PDF Export** — Print-ready PDF with Vellum branding
+- **Investor Score** — Quick investor-readiness assessment
+
+### Platform
+- **OAuth Authentication** — Google and GitHub sign-in via Supabase
+- **Session History** — Browse and revisit past BRD generations
+- **User-Scoped Data** — Each user sees only their own sessions
+- **Idea Validation** — Standalone idea validation with multi-dimensional scoring
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|----------|
-| **Frontend** | Next.js 15, React 19, Tailwind CSS 4 | Server-side rendered UI with amber/zinc design system |
-| **Backend** | FastAPI 0.115, Python 3.12+, Pydantic v2 | High-performance async API with strict type validation |
-| **ORM / DB** | SQLAlchemy 2.0, SQLite | Zero-config persistence with JSON column support |
-| **LLM** | Groq API (llama-3.3-70b, llama-3.1-8b) | Sub-2s inference for extraction; deep reasoning for BRD |
-| **PDF** | ReportLab 4.2 | Server-side A4 PDF generation, pure Python, in-memory |
-| **Language** | i18n (EN / HI) | Client-side language switching, prompt language injection |
+### Frontend
+| Technology | Purpose |
+|---|---|
+| **Next.js 14** (App Router) | React framework with SSR, routing, and API integration |
+| **TypeScript** | Type safety across the entire frontend |
+| **Tailwind CSS** | Utility-first styling with dark theme |
+| **Supabase Auth (SSR)** | Cookie-based authentication with Google/GitHub OAuth |
+| **Framer Motion** | Smooth animations and page transitions |
+| **Lucide React** | Icon library |
+| **docx.js** | Client-side Word document generation |
+| **html2pdf.js** | Client-side PDF generation |
 
----
+### Backend
+| Technology | Purpose |
+|---|---|
+| **FastAPI** (Python 3.11) | Async API framework with automatic OpenAPI docs |
+| **Groq API** | Llama 3.3 70B and 8B models via LPU inference |
+| **SQLAlchemy** | ORM for Supabase PostgreSQL |
+| **python-jose** | JWT token verification for Supabase auth |
+| **Pydantic** | Request/response validation and structured outputs |
+| **Server-Sent Events** | Real-time streaming pipeline progress |
 
-## Features
-
-### Current (v2.1.0)
-
-- **One-Shot BRD Generation** — Full Business Requirements Document from a single idea description
-- **Multimodal Input** — Paste text or upload images/documents for extraction
-- **Idea Validation Engine** — 5-dimension scoring with radar chart visualization
-- **Vellum Score** — Weighted composite metric combining idea quality + BRD quality
-- **Instant PDF Export** — Professional A4 PDF with cover page, tables, SWOT, timeline, and risk matrix
-- **Zero-Friction UX** — No sign-up, no sessions, no dashboard. Come, search, go.
-- **Bilingual Support** — English and Hindi with client-side switching
-- **Persistent Storage** — SQLite-backed sessions that survive server restarts
-
-### Design System
-
-- **Theme**: Warm amber accents on neutral zinc backgrounds — not dark mode, not generic blue
-- **Components**: `card-3d`, `glass-card`, `btn-3d-secondary` for depth and visual hierarchy
-- **Typography**: Inter / system sans-serif stack, clean and readable
-- **Layout**: Responsive grid with col-span patterns for score cards and content sections
-
----
-
-## Project Structure
-
-```
-
-vellum/
-├── ai-service/                     # FastAPI backend
-│   ├── app/
-│   │   ├── main.py                 # App entrypoint, lifespan, router registration
-│   │   ├── database.py             # SQLAlchemy engine, SessionLocal, init_db()
-│   │   ├── models/
-│   │   │   └── db_models.py        # BRDSession, IdeaValidation ORM models
-│   │   ├── routers/
-│   │   │   ├── pipeline.py         # Core orchestrator, Vellum Score, DB helpers
-│   │   │   ├── extraction.py       # POST /api/extract
-│   │   │   ├── brd.py              # POST /api/generate/brd
-│   │   │   ├── critic.py           # POST /api/critic
-│   │   │   ├── multimodal.py       # POST /api/multimodal/extract
-│   │   │   ├── validation.py       # POST /api/validate
-│   │   │   └── export.py           # GET /api/export/pdf/{session_id}
-│   │   ├── services/
-│   │   │   └── pdf_export.py       # ReportLab PDF generation
-│   │   └── prompts/                # System prompts for each LLM call
-│   ├── requirements.txt
-│   └── .env                        # GROQ_API_KEY
-│
-├── frontend/                       # Next.js frontend
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── page.tsx            # Landing page
-│   │   │   ├── layout.tsx          # Root layout, fonts, metadata
-│   │   │   ├── generate/page.tsx   # BRD generation interface
-│   │   │   ├── validate/page.tsx   # Idea validation with radar chart
-│   │   │   └── results/[sessionId]/page.tsx  # Results + PDF download
-│   │   ├── components/
-│   │   │   └── VellumScore.tsx     # Score ring component (color-coded)
-│   │   └── globals.css             # Tailwind + custom CSS classes
-│   ├── package.json
-│   ├── tailwind.config.ts
-│   └── next.config.ts
-│
-├── .gitignore
-└── README.md
-```
+### Infrastructure
+| Technology | Purpose |
+|---|---|
+| **Render** | Backend hosting (Docker deployment) |
+| **Netlify** | Frontend hosting (CDN + SSR) |
+| **Supabase** | PostgreSQL database + Auth + JWT management |
+| **Groq Cloud** | LLM inference (LPU chips) |
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
+- Node.js 18+
+- Python 3.11+
+- Groq API key ([groq.com](https://groq.com))
+- Supabase project with Auth configured ([supabase.com](https://supabase.com))
 
-- Python 3.12+
-- Node.js 20+
-- [Groq API Key](https://console.groq.com)
+### Environment Variables
 
-### Setup
+**Frontend (`.env.local`):**
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_API_URL=https://your-api.onrender.com
+```
+
+**Backend (`.env`):**
+```env
+GROQ_API_KEY=gsk_your_key
+DATABASE_URL=postgresql://user:pass@host:5432/db
+SUPABASE_JWT_SECRET=your-jwt-secret
+GROQ_PRIMARY_MODEL=llama-3.3-70b-versatile
+GROQ_FALLBACK_MODEL=llama-3.3-70b-versatile
+```
+
+### Local Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/shresthbhargava/vellum.git
-cd vellum
-
-# --- Backend ---
-cd ai-service
+# Backend
+cd vellum-ai-service
 pip install -r requirements.txt
-cp .env.example .env
-# Edit .env and add your GROQ_API_KEY
+uvicorn app.main:app --reload
 
-# Start the backend
-uvicorn app.main:app --reload --port 8500
-
-# --- Frontend (new terminal) ---
-cd frontend
+# Frontend
+cd vellum-frontend
 npm install
 npm run dev
-
-# Open http://localhost:3000
 ```
-
-The backend runs on **port 8500**, the frontend on **port 3000**. The frontend proxies API calls to the backend.
 
 ---
 
-## API Endpoints
+## API Reference
 
+### Pipeline
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/generate` | Full pipeline: extract → BRD → critic → score |
-| `POST` | `/api/extract` | Extract structured data from idea text |
-| `POST` | `/api/generate/brd` | Generate BRD from extracted data |
-| `POST` | `/api/critic` | Quality review of generated BRD |
-| `POST` | `/api/validate` | Validate idea across 5 dimensions |
-| `POST` | `/api/multimodal/extract` | Extract from uploaded images/documents |
-| `GET`  | `/api/export/pdf/{session_id}` | Download BRD as PDF |
-| `GET`  | `/api/pipeline/{session_id}` | Retrieve full session data |
+|---|---|---|
+| `POST` | `/api/stream` | SSE streaming BRD generation (primary) |
+| `POST` | `/api/generate` | Synchronous BRD generation (fallback) |
+| `GET` | `/api/results/{session_id}` | Retrieve full session results |
+| `GET` | `/api/sessions/{session_id}/agents` | Get session with agent traces |
+
+### Sessions
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/sessions` | List user's sessions (recent 20) |
+| `GET` | `/api/sessions/{session_id}` | Get session detail |
+
+### Standalone Agents
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/extraction` | Extract business data from text |
+| `POST` | `/api/brd/draft` | Generate BRD from extracted data |
+| `POST` | `/api/brd/critic` | Review and score a BRD draft |
+| `POST` | `/api/multimodal-extraction` | Extract data from text + images |
+
+### Authentication
+All endpoints require `Authorization: Bearer <supabase_jwt>` header.
 
 ---
 
-## Vellum Score
+## Deployment
 
-The composite quality metric that powers Vellum's output assessment:
+### Backend (Render)
+1. Connect GitHub repo to Render
+2. Set environment variables
+3. Deploy as Docker service (Dockerfile included)
 
-```
-Vellum Score = 0.4 × Validation Score + 0.6 × BRD Quality Score
-```
-
-- **Validation Score (40%)** — How strong is the idea itself? Assessed across market viability, technical feasibility, innovation, scalability, and revenue potential.
-- **BRD Quality Score (60%)** — How well did the AI capture and structure the idea? Assessed across completeness, clarity, technical depth, market analysis, feasibility, structure, actionability, and professionalism.
-
-Fallback logic: if only one score is available, it serves as the Vellum Score directly.
-
-| Range | Color | Interpretation |
-|-------|-------|---------------|
-| ≥ 7.5 | 🟢 Green | Strong idea, well-structured BRD |
-| ≥ 5.5 | 🟡 Amber | Decent foundation, needs refinement |
-| < 5.5 | 🔴 Red | Significant gaps — iterate on the idea |
+### Frontend (Netlify)
+1. Connect GitHub repo to Netlify
+2. Set environment variables
+3. Build command: `npm run build`
+4. Publish directory: `.next`
 
 ---
 
 ## Roadmap
 
-### Near-Term
-
-- [ ] **Financial Feasibility Analyzer** — ML-based loan eligibility scoring integrated into the validation pipeline. Assesses funding readiness with financial projections and risk metrics.
-- [ ] **RAG Citation Layer** — Ground BRD outputs in real web sources. Every claim in the BRD back-linked to a cited source for credibility.
-
-### Mid-Term
-
-- [ ] **Competitor Deep Dive** — Automated competitive landscape analysis with market positioning maps and feature comparison matrices.
-- [ ] **BRD Versioning** — Allow users to iterate on ideas and generate versioned BRDs with diff comparisons.
-- [ ] **Multi-Language Expansion** — Support for 10+ Indian languages beyond English and Hindi.
-
-### Long-Term
-
-- [ ] **Investor Matchmaking** — Match validated ideas with relevant investor profiles and funding programs.
-- [ ] **Collaborative BRD** — Real-time multi-user editing of generated BRDs.
-- [ ] **API Access** — Public API for developers to integrate Vellum's intelligence into their own tools.
-
----
-
-## Design Decisions
-
-### Why Groq over OpenAI?
-
-Sub-2-second inference on `llama-3.1-8b` for extraction, and high-quality reasoning on `llama-3.3-70b` for BRD generation — at a fraction of the cost. The two-model strategy (fast extraction + deep generation) is only practical with Groq's speed.
-
-### Why SQLite over PostgreSQL?
-
-Vellum is a stateless, single-server tool. SQLite gives zero-config persistence, no container dependency, and seamless server restarts. When (if) Vellum needs horizontal scaling, the SQLAlchemy ORM makes the migration to PostgreSQL a config change.
-
-### Why ReportLab over browser-side PDF?
-
-Server-side generation guarantees consistent formatting, handles complex tables and layouts reliably, and produces files optimized for print — not screenshots of a web page.
-
-### Why no auth?
-
-Vellum's philosophy is **zero friction**. Every additional step (sign-up, email verification, dashboard onboarding) is a user that doesn't convert. The product earns trust through output quality, not account walls.
+- [x] Multi-agent BRD generation pipeline
+- [x] Real-time SSE streaming progress
+- [x] Competitive intelligence and benchmarking
+- [x] Vellum Score composite scoring
+- [x] Word and PDF export
+- [x] Supabase Auth (Google + GitHub)
+- [ ] **BRD refinement** — Iterate on specific sections with AI feedback
+- [ ] **Team collaboration** — Share BRDs, add comments, version history
+- [ ] **Template library** — Industry-specific BRD templates (SaaS, fintech, healthtech)
+- [ ] **Investor dashboard** — Portfolio-wide BRD quality tracking
+- [ ] **API access** — Let other tools integrate with Vellum's pipeline
+- [ ] **Custom model support** — Bring your own OpenAI, Anthropic, or local model
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-
-Built with focus by [Shresth Bhargava](https://github.com/shresthbhargava)
-
-**Vellum** — Come. Search. Go.
-
-</div>
+MIT License — free for personal and commercial use.
